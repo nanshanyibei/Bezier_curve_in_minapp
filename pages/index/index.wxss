@@ -1,34 +1,136 @@
-/**index.wxss**/
 .container{
-  height: 80rpx;
-  width: 100%;
-  background: #ffcccc;
   position: fixed;
+  width: 100%;
+  height: 100rpx;
+  background: #ffcccc;
+  bottom: 0;
+}
+.contain-thanks-comment{
+  position: fixed;
+  width: 100%;
+  height: 100rpx;
   bottom: 0;
 }
 .left-animation{
-  
+  position: relative;
+  transform: rotate(-135deg);
+  top: -300rpx;
+  width: 300rpx;
+  height: 300rpx;
+  left: 450rpx;
 }
-.left-contain-0{
-  position: absolute;
-  right: 60rpx;
-  animation: run-left 3s linear 1 backwards,
-             run-top 3s cubic-bezier(.11,.74,1,.05) 1 backwards;
+.left-contain{
+  transform: scale(0);
 }
 .left-contain-1{
   position: absolute;
-  right: 40rpx;
-  animation: run-left 3s linear 1 backwards,
-             run-top 3s cubic-bezier(.68,.12,.05,1.03) 1 backwards;
+  animation: run_right 3.5s 0s 1 linear,
+             run_top 3.5s 0s 1 cubic-bezier(.03,.89,.94,.34)
 }
 .left-contain-2{
   position: absolute;
-  right: 80rpx;
-  animation: run-left 3s linear 1 backwards,
-             run-top 3s cubic-bezier(.79,.06,.97,.23) 1 backwards;
+  animation: run_right 3.5s 0s 1 linear,
+             run_top 3.5s 0s 1 cubic-bezier(.99,.13,.25,.76)
+}
+.left-contain-3{
+  position: absolute;
+  animation: run_right 3.5s 0s 1 linear,
+             run_top 3.5s 0s 1 cubic-bezier(.5,.28,1,.37)
+}
+@keyframes run_right{
+  0%{
+    left: 0;
+    transform: scale(0);
+  }
+  20%{
+    transform: scale(1);
+  }
+  100%{
+    left: 300rpx;
+    transform: scale(1);
+  }
+}
+@keyframes run_top{
+  0%{
+    top: 0;
+    transform: scale(0);
+  }
+  20%{
+    transform: scale(1);
+  }
+  100%{
+    top: 300rpx;
+    transform: scale(1);
+  }
 }
 .left-image{
-  width: 50rpx;
-  height: 50rpx;
-  border-radius: 25rpx;
+  width: 48rpx;
+  height: 48rpx;
+  transform: rotate(135deg);
+  border-radius: 24rpx;
+}
+.right-animation{
+  height: 140rpx;
+  overflow: hidden;
+  position: relative;
+  top: -145rpx;
+  margin-left: 10rpx;
+}
+.animation{
+  animation-name: run-comment;
+  animation-duration: 3s;
+  animation-delay: 0s;
+  animation-iteration-count: 1;
+  animation-timing-function: linear;
+}
+@keyframes run-comment{
+  0%{
+    top: 140rpx;
+    opacity: 1;
+  }
+  11.11%{
+    top: 70rpx;
+  }
+  44.44%{
+    top: 70rpx;
+  }
+  55.55%{
+    top: 0rpx;
+  }
+  88.88%{
+    top: 0rpx;
+    opacity: 1;
+  }
+  100%{
+    top: -70rpx;
+    opacity: 0.4;
+  }
+}
+.right-contain-wrap{
+  position: absolute;
+  background: rgba(85, 85, 85, 0.9);
+  border-radius: 60rpx;
+  top: 140rpx;
+  opacity: 1;
+}
+.right-contain{
+  display: flex;
+  align-items: center;
+  height: 60rpx;
+  max-width: 600rpx;
+  font-size: 28rpx;
+  color: #fff;
+  margin: 0 25rpx 0 6rpx;
+}
+.right-text{
+  margin-left: 10rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.right-avatar{
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 24rpx;
+  flex: 0 0 auto;
 }

@@ -4,25 +4,37 @@
     wx:if="{{leftAnimationShow}}"
     class="left-animation"
     >
-    <block wx:for="{{leftAnimation}}" wx:key="item">
-      <view
-        class="left-contain-{{index % 3}}"
-        style='animation-delay: {{index + 0.5}}s'
-        data-index='{{index}}'
-        bind:animationend="leftAnimationEnd"
-        >
-        <image class="left-image" src="{{item}}" />
-      </view>
-    </block>
+    <view
+      wx:for="{{leftAnimation}}"
+      wx:key="item"
+      data-index="{{index}}"
+      class="left-contain left-contain-{{index % 3 + 1}}"
+      style="animation-delay: {{index * 0.5}}s"
+      bind:animationend="leftAnimationEnd"
+      >
+      <image class="left-image"
+        src='{{item}}'
+        />
+    </view>
   </view>
-  <view wx:if="{{rightAnimationShow}}" class="right-animation">
-    <block wx:for="{{rightAnimation}}">
+  <view
+    wx:if="{{rightAnimationShow}}"
+    class="right-animation">
+    <block
+      wx:for="{{rightAnimation}}"
+      wx:key="item.avatar"
+      >
       <view
-        class="right-contain"
-        bind:animationend="rightAnimationEnd"
-        >
-        <image class="right-avatar" src="{{item.avatar}}" />
-        <text class="right-text">{{item.text}}</text>
+        class="right-contain-wrap {{animation || 'animation'}}"
+        style="animation-delay: {{index * 1.33}}s"
+        data-index="{{index}}"
+        bind:animationend="rightAnimationEnd">
+        <view
+          class="right-contain"
+          data-index="{{index}}">
+          <image class="right-avatar" src='{{item.avatar}}'/>
+          <view class="right-text">{{item.text}}</view>
+        </view>
       </view>
     </block>
   </view>

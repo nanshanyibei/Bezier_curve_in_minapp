@@ -35,18 +35,51 @@ Page({
       }
     ]
   },
-  onLoad(){
-    console.log("页面渲染才完成")
+  onReady(){
+    this.leftCounter = 0
+    this.rightCounter = 0
     setTimeout(() => {
       this.setData({
-        leftAnimationShow: true
+        rightAnimationShow: true
       })
-    }, 2000)
-  },
-  leftAnimationEnd(e){
-    console.log(e)
+    }, 1000)
   },
   rightAnimationEnd(e){
-    console.log(e)
+    if (e.currentTarget.dataset.index === this.data.rightAnimation.length - 1) {
+      this.setData({
+        rightAnimationShow: false
+      })
+      if (this.rightCounter < 3) {
+        setTimeout(() => {
+          this.setData({
+            rightAnimationShow: true
+          })
+          this.rightCounter ++
+        }, 2000)
+      } else {
+        this.setData({
+          rightAnimationShow: false
+        })
+      }
+    }
+  },
+  leftAnimationEnd(e){
+    if (e.currentTarget.dataset.index === this.data.leftAnimation.length - 1) {
+      this.setData({
+        leftAnimationShow: false
+      })
+      if (this.leftCounter < 5) {
+        this.setData({
+          leftAnimationShow: true
+        })
+        this.leftCounter ++
+      } else {
+        this.setData({
+          rightAnimationShow: true,
+          leftAnimationShow: false
+        })
+        this.rightCounter ++
+      }
+    }
   }
 })
