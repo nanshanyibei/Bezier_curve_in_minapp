@@ -31,7 +31,7 @@ Page({
         text: '一二三四五六七，七六五四三二一'
       },{
         avatar: 'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1565493555&di=8aa6df0e8d717894abf672a1e4b51fe3&imgtype=jpg&er=1&src=http%3A%2F%2Fimg.duoziwang.com%2Fuploads%2F1512%2F1-1512261603200-L.jpg',
-        text: '一二三四，二二三四，三二三四，四二三四'
+        text: '一二三四，二二三四，三二三四，四二三四，五五六六，七七八八'
       }
     ]
   },
@@ -40,7 +40,7 @@ Page({
     this.rightCounter = 0
     setTimeout(() => {
       this.setData({
-        rightAnimationShow: true
+        leftAnimationShow: true
       })
     }, 1000)
   },
