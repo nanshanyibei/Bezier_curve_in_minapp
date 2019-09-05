@@ -1,6 +1,8 @@
 //index.js
 Page({
   data: {
+    screen_width: '',
+    screen_height: '',
     leftAnimationShow: false,
     rightAnimationShow: false,
     leftAnimation: [
@@ -36,6 +38,7 @@ Page({
     ]
   },
   onReady(){
+    this.tempPath = ''
     this.leftCounter = 0
     this.rightCounter = 0
     setTimeout(() => {
@@ -43,6 +46,68 @@ Page({
         leftAnimationShow: true
       })
     }, 1000)
+
+  },
+  onLoad(){
+    this.model = ''
+    this.screen_width = ''
+    this.screen_height = ''
+    this.avatarUrl = ''
+    this.nickName = ''
+    this.resTempPath = ''
+    const that = this
+    wx.getSystemInfo({
+      success: function(res){
+        that.setData({
+          screen_width: res.windowWidth / 375,
+          screen_height: res.windowHeight
+        })
+        that.model = res.model        
+      }
+    })
+    wx.getUserInfo({
+      success(res){
+        that.nickName = res.userInfo.nickName
+        that.avatarUrl = res.userInfo.avatarUrl
+        that.generateImage()
+      }
+    })
+  },
+  generateImage(){
+    const ctx = wx.createCanvasContext('myCanvas')
+    let rpx = this.data.screen_width
+    ctx.fillStyle = "#000000"
+    ctx.setFontSize(15 * rpx)
+    ctx.font = 'normal 400 Source Han Sans CN'
+    ctx.fillText(this.nickName, 10 * rpx, 110 * rpx)
+    let that = this
+    wx.downloadFile({
+      url: this.avatarUrl,
+      success: (res) => {
+        ctx.drawImage(res.tempFilePath, 10 * rpx, 10 * rpx, 80 * rpx, 80 * rpx)
+        ctx.draw()
+        wx.canvasToTempFilePath({
+          canvasId: 'myCanvas',
+          success: function (res) {
+            that.resTempPath = res.tempFilePath
+          },
+          fail: function (res) {
+            console.log(res);
+          }
+        })
+      }
+    })    
+  },
+  onShareAppMessage(){
+    wx.showShareMenu({
+      withShareTicket: true
+    })
+    const resImageUrl = this.resTempPath ? this.resTempPath : "http://pic13.nipic.com/20110409/7119492_114440620000_2.jpg"
+    return {
+      title: '雷佳佳的小程序',
+      path: 'pages/share/share?test=111',
+      imageUrl: resImageUrl
+    }
   },
   rightAnimationEnd(e){
     if (e.currentTarget.dataset.index === this.data.rightAnimation.length - 1) {

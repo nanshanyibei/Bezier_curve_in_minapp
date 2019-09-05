@@ -39,3 +39,8 @@
     </block>
   </view>
 </view>
+<canvas
+  class="my-canvas"
+  style="width: {{screen_width * 375 + 'px'}} height: {{screen_height * 1.21 + 'px'}}" 
+  canvas-id="myCanvas" 
+  />

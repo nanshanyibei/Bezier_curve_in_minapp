@@ -1,7 +1,7 @@
 .container{
   position: fixed;
   width: 100%;
-  height: 100rpx;
+  height: 105rpx;
   background: #ffcccc;
   bottom: 0;
 }
@@ -133,4 +133,8 @@
   height: 48rpx;
   border-radius: 24rpx;
   flex: 0 0 auto;
+}
+.my-canvas{
+  position: relative;
+  top: -3000rpx;
 }
