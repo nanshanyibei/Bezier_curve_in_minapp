@@ -13,7 +13,6 @@ App({
     })
   },
   onShow(e){
-    console.log("app->onShow->e", e)
     if(e.shareTicket){
       this.globalData.shareTicket = e.shareTicket
     }
