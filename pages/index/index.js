@@ -1,10 +1,13 @@
 //index.js
+let app = getApp()
+
 Page({
   data: {
     screen_width: '',
     screen_height: '',
     leftAnimationShow: false,
     rightAnimationShow: false,
+    userInfo: '',
     leftAnimation: [
       'https://ss0.bdstatic.com/70cFvHSh_Q1YnxGkpoWK1HF6hhy/it/u=2510163673,100790501&fm=26&gp=0.jpg',
       'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1564898475146&di=856669a32a74f9cbe8b445a3930dad48&imgtype=0&src=http%3A%2F%2Fimg5.duitang.com%2Fuploads%2Fitem%2F201408%2F25%2F20140825000809_dme4E.jpeg',
@@ -52,8 +55,6 @@ Page({
     this.model = ''
     this.screen_width = ''
     this.screen_height = ''
-    this.avatarUrl = ''
-    this.nickName = ''
     this.resTempPath = ''
     const that = this
     wx.getSystemInfo({
@@ -65,13 +66,15 @@ Page({
         that.model = res.model        
       }
     })
-    wx.getUserInfo({
-      success(res){
-        that.nickName = res.userInfo.nickName
-        that.avatarUrl = res.userInfo.avatarUrl
-        that.generateImage()
-      }
+    wx.showShareMenu({
+      withShareTicket: true
     })
+    app.userInfoReadyCallback = function(){
+      that.setData({
+        userInfo: app.globalData.userInfo
+      })
+      that.generateImage()
+    }
   },
   generateImage(){
     const ctx = wx.createCanvasContext('myCanvas')
@@ -79,10 +82,10 @@ Page({
     ctx.fillStyle = "#000000"
     ctx.setFontSize(15 * rpx)
     ctx.font = 'normal 400 Source Han Sans CN'
-    ctx.fillText(this.nickName, 10 * rpx, 110 * rpx)
+    ctx.fillText(this.data.userInfo.nickName, 10 * rpx, 110 * rpx)
     let that = this
     wx.downloadFile({
-      url: this.avatarUrl,
+      url: this.data.userInfo.avatarUrl,
       success: (res) => {
         ctx.save()
         ctx.beginPath()
@@ -103,10 +106,7 @@ Page({
       }
     })    
   },
-  onShareAppMessage(){
-    wx.showShareMenu({
-      withShareTicket: true
-    })
+  onShareAppMessage(){    
     const resImageUrl = this.resTempPath ? this.resTempPath : "http://pic13.nipic.com/20110409/7119492_114440620000_2.jpg"
     return {
       title: '雷佳佳的小程序',
