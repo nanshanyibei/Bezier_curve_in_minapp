@@ -84,7 +84,12 @@ Page({
     wx.downloadFile({
       url: this.avatarUrl,
       success: (res) => {
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(45 * rpx, 45 * rpx, 35 * rpx, 0, Math.PI * 2, false)
+        ctx.clip()        
         ctx.drawImage(res.tempFilePath, 10 * rpx, 10 * rpx, 80 * rpx, 80 * rpx)
+        ctx.restore()
         ctx.draw()
         wx.canvasToTempFilePath({
           canvasId: 'myCanvas',
