@@ -3,18 +3,18 @@ let app = getApp()
 
 Page({
   data: {
-    userInfo: ''
+    userInfo: app.globalData.userInfo
   },
   onReady(){
   },
   onLoad: function(options) {
-    console.log(options)
     const that = this
+    console.log(app.globalData)
     app.userInfoReadyCallback = function(){
+      console.log("fasdjfs", app.globalData)
       that.setData({
         userInfo: app.globalData.userInfo
       })
-      console.log("onLoad", app)
     }
   },
 })

@@ -134,7 +134,3 @@
   border-radius: 24rpx;
   flex: 0 0 auto;
 }
-.my-canvas{
-  position: relative;
-  top: -3000rpx;
-}

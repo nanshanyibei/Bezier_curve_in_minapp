@@ -2,4 +2,5 @@
 <view class="container">
 	<image class="avatar-image" src="{{userInfo.avatarUrl}}" />
 	<view class="user-nickname">{{userInfo.nickName}}</view>
+	<open-data type="groupName" open-gid="{{openGId}}" onLoad="getInfo" />
 </view>

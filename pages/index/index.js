@@ -73,15 +73,35 @@ Page({
       that.setData({
         userInfo: app.globalData.userInfo
       })
-      that.generateImage()
     }
+  },
+  getUserInfo(){
+    const that = this
+    wx.getSetting({
+      success: res => {
+        if(res.authSetting['scope.userInfo']){
+          wx.getUserInfo({
+            success: res => {
+              app.globalData.userInfo = res.userInfo
+              that.setData({
+                userInfo: res.userInfo,
+              })
+            },
+            fail: res => {
+              console.log("获取用户信息失败", res)
+            }
+          })
+        } else {
+          that.showSettingToast("请授权")
+        }
+      }
+    })
   },
   generateImage(){
     const ctx = wx.createCanvasContext('myCanvas')
     let rpx = this.data.screen_width
     ctx.fillStyle = "#000000"
     ctx.setFontSize(15 * rpx)
-    ctx.font = 'normal 400 Source Han Sans CN'
     ctx.fillText(this.data.userInfo.nickName, 10 * rpx, 110 * rpx)
     let that = this
     wx.downloadFile({
@@ -90,7 +110,7 @@ Page({
         ctx.save()
         ctx.beginPath()
         ctx.arc(45 * rpx, 45 * rpx, 35 * rpx, 0, Math.PI * 2, false)
-        ctx.clip()        
+        ctx.clip()
         ctx.drawImage(res.tempFilePath, 10 * rpx, 10 * rpx, 80 * rpx, 80 * rpx)
         ctx.restore()
         ctx.draw()

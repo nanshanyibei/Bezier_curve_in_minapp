@@ -1,46 +1,64 @@
 <!--index.wxml-->
-<view class="container">
-  <view
-    wx:if="{{leftAnimationShow}}"
-    class="left-animation"
+<view
+  wx:if="{{!userInfo}}"
+  >
+  <button
+    open-type="getUserInfo"
+    bindgetuserinfo="getUserInfo"
     >
-    <view
-      wx:for="{{leftAnimation}}"
-      wx:key="item"
-      data-index="{{index}}"
-      class="left-contain left-contain-{{index % 3 + 1}}"
-      style="animation-delay: {{index * 0.5}}s"
-      bind:animationend="leftAnimationEnd"
-      >
-      <image class="left-image"
-        src='{{item}}'
-        />
-    </view>
-  </view>
-  <view
-    wx:if="{{rightAnimationShow}}"
-    class="right-animation">
-    <block
-      wx:for="{{rightAnimation}}"
-      wx:key="item.avatar"
-      >
-      <view
-        class="right-contain-wrap {{animation || 'animation'}}"
-        style="animation-delay: {{index * 1.33}}s"
-        data-index="{{index}}"
-        bind:animationend="rightAnimationEnd">
-        <view
-          class="right-contain"
-          data-index="{{index}}">
-          <image class="right-avatar" src='{{item.avatar}}'/>
-          <view class="right-text">{{item.text}}</view>
-        </view>
-      </view>
-    </block>
+    授权获取头像昵称
+  </button>
+  <view class="profile">
+    个人小程序，用于测试，可以绘制有自己头像的海报分享，分享在群中时有分享圈功能
   </view>
 </view>
-<canvas
-  class="my-canvas"
-  style="width: {{screen_width * 375 + 'px'}} height: {{screen_height * 1.21 + 'px'}}" 
-  canvas-id="myCanvas" 
-  />
+
+<view wx:else>
+  <button bind:tap="generateImage">点击生成海报</button>
+  <view class="container">
+    <view
+      wx:if="{{leftAnimationShow}}"
+      class="left-animation"
+      >
+      <view
+        wx:for="{{leftAnimation}}"
+        wx:key="item"
+        data-index="{{index}}"
+        class="left-contain left-contain-{{index % 3 + 1}}"
+        style="animation-delay: {{index * 0.5}}s"
+        bind:animationend="leftAnimationEnd"
+        >
+        <image class="left-image"
+          src='{{item}}'
+          />
+      </view>
+    </view>
+    <view
+      wx:if="{{rightAnimationShow}}"
+      class="right-animation">
+      <block
+        wx:for="{{rightAnimation}}"
+        wx:key="item.avatar"
+        >
+        <view
+          class="right-contain-wrap {{animation || 'animation'}}"
+          style="animation-delay: {{index * 1.33}}s"
+          data-index="{{index}}"
+          bind:animationend="rightAnimationEnd">
+          <view
+            class="right-contain"
+            data-index="{{index}}">
+            <image class="right-avatar" src='{{item.avatar}}'/>
+            <view class="right-text">{{item.text}}</view>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+  <canvas
+    class="my-canvas"
+    style="width: {{screen_width * 375 + 'px'}} height: {{screen_height * 1.21 + 'px'}}" 
+    canvas-id="myCanvas" 
+    />
+</view>
+
