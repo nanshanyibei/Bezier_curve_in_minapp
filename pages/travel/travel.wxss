@@ -42,6 +42,20 @@
   font-weight: 600;
 }
 
+/* 操作提示 */
+.hint {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(110rpx + env(safe-area-inset-bottom));
+  font-size: 22rpx;
+  color: var(--text-dim);
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 999rpx;
+  padding: 8rpx 22rpx;
+  pointer-events: none;
+}
+
 /* 图例 */
 .legend {
   position: absolute;

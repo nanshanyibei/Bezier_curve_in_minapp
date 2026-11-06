@@ -1,4 +1,4 @@
-const liteFC = require('../../assets/geo/china-lite.js');
+const fullFC = require('../../assets/geo/china-full.js');
 const geoMap = require('../../utils/geoMap');
 const geoRender = require('../../utils/geoRender');
 const geoGesture = require('../../utils/geoGesture');
@@ -16,6 +16,7 @@ Page({
     progress: 0,
     loadingText: '',
     error: '',
+    showHint: true,            // 全国视图操作提示
     sheet: null                // { name, adcode, levelLabel, status }
   },
 
@@ -31,8 +32,10 @@ Page({
   _marks: {},
   _gs: null,
   _animToken: 0,
-  _loadingFull: false,
   _highlight: '',
+  _domainWarned: false,
+  _netWarned: false,
+  _autoDrillLocked: false,
 
   onLoad() {
     this._marks = travelStore.getAll();
@@ -80,9 +83,9 @@ Page({
         this._H = height;
         this._renderer = geoRender.createRenderer(node, ctx);
 
-        // lite 层同步构建，秒开可交互
+        // 全国精确边界已打包进小程序（assets/geo/china-full.js），无需网络
         try {
-          this._layer = geoMap.buildLayer(liteFC, { level: 'country', adcode: COUNTRY });
+          this._layer = geoMap.buildLayer(fullFC, { level: 'country', adcode: COUNTRY });
           this._countryLayer = this._layer;
           this._view = geoMap.fitView(this._layer.bbox, width, height, 16);
           this._view._layerBBox = this._layer.bbox;
@@ -91,43 +94,12 @@ Page({
           this.setData({ error: '地图初始化失败：' + e.message });
           return;
         }
-
-        // 完整数据后台静默加载替换
-        this.loadFull();
       });
-  },
-
-  /** 完整全国数据（含精确边界），失败时保留 lite 层可用 */
-  loadFull() {
-    if (this._loadingFull) return;
-    this._loadingFull = true;
-    this.setData({ loading: true, progress: 0, loadingText: '正在下载地图数据…', error: '' });
-    geoMap.getLayer(COUNTRY, {
-      level: 'country',
-      onProgress: (p) => {
-        if (p < 100) this.setData({ loadingText: '正在下载地图数据 ' + p + '%' });
-      }
-    }).then((layer) => {
-      this._loadingFull = false;
-      this._countryLayer = layer;
-      // 仅当用户仍在全国视图时替换，避免打断下钻
-      if (this.data.level === 'country') {
-        this._layer = layer;
-        this._view._layerBBox = layer.bbox;
-      }
-      this.setData({ loading: false });
-      this.draw();
-    }).catch((err) => {
-      this._loadingFull = false;
-      console.error('[travel] 精确边界加载失败:', err && err.message || err);
-      const detail = err && err.message ? '，' + String(err.message).slice(0, 60) : '';
-      this.setData({ loading: false, error: '精确边界加载失败（当前为简图）' + detail + '，点击重试' });
-    });
   },
 
   onRetry() {
     this.setData({ error: '' });
-    if (this.data.level === 'country' && !this._loadingFull) this.loadFull();
+    this.initCanvas();
   },
 
   // ---------- 绘制 ----------
@@ -138,7 +110,8 @@ Page({
       view: this._view,
       W: this._W,
       H: this._H,
-      marks: this._marks
+      marks: this._marks,
+      level: this.data.level
     });
   },
 
@@ -162,6 +135,21 @@ Page({
     const r = geoGesture.end(this._gs, e.touches);
     if (r.gesture === 'tap') this.handleTap(r.x, r.y);
     // 长按已在回调里处理
+    this.maybeAutoDrill();
+  },
+
+  /** 放大到阈值自动下钻视野中心所在省（放大即出市界）；缩到阈值外自动回全国 */
+  maybeAutoDrill() {
+    if (this.data.loading || this._autoDrillLocked) return;
+    const ratio = this._view.scale / this._view.baseScale;
+    if (this.data.level === 'country') {
+      if (ratio < 2.2) return;
+      const wpt = geoMap.screenToWorld(this._view, this._W / 2, this._H / 2);
+      const region = geoMap.hitTest(this._layer, wpt[0], wpt[1]);
+      if (region) this.drillTo(region, { silent: true });
+    } else if (this.data.level === 'province' && ratio <= 0.6) {
+      this.onBack();
+    }
   },
 
   onTouchCancel() {
@@ -181,16 +169,15 @@ Page({
   },
 
   handleLongPress(x, y) {
-    const wpt = geoMap.screenToWorld(this._view, x, y);
-    const region = geoMap.hitTest(this._layer, wpt[0], wpt[1]);
-    if (!region) return;
-    this.openSheet(region);
+    // 与单击一致：全国层下钻省份，省级层打开标记弹层
+    this.handleTap(x, y);
   },
 
   // ---------- 下钻 / 返回 ----------
-  drillTo(region) {
+  drillTo(region, opts) {
     if (this.data.loading) return;
-    this.setData({ loading: true, progress: 0, loadingText: '正在加载' + region.name + '…' });
+    const silent = !!(opts && opts.silent);
+    this.setData({ loading: true, progress: 0, loadingText: '正在加载' + region.name + '…', showHint: false });
     geoMap.getLayer(region.adcode, { level: 'province' }).then((layer) => {
       this._highlight = region.adcode;
       const target = geoMap.fitView(layer.bbox, this._W, this._H, 24);
@@ -205,9 +192,28 @@ Page({
         });
         this.draw();
       });
-    }).catch(() => {
-      // 台湾/港澳无下级数据：省级直接标记
+    }).catch((err) => {
       this.setData({ loading: false });
+      const msg = (err && err.message) || '';
+      console.error('[travel] 下钻加载失败:', region.name, msg);
+      // 自动触发（缩放）失败：锁住，避免每次手势反复重试；静默提示
+      if (silent) {
+        this._autoDrillLocked = true;
+        if (!this._netWarned) {
+          this._netWarned = true;
+          wx.showToast({ title: '市界数据需联网加载', icon: 'none' });
+        }
+        return;
+      }
+      if (msg.indexOf('domain list') >= 0 && !this._domainWarned) {
+        this._domainWarned = true;
+        wx.showModal({
+          title: '市界数据需要联网',
+          content: '真机请点右上角「…」→ 打开调试模式；或在 mp 后台把 file.geojson.cn 加入 request 与 downloadFile 合法域名。本次先用省级标记。',
+          showCancel: false
+        });
+      }
+      // 台湾/港澳无下级数据或网络不可用：省级直接标记
       this.openSheet(region);
     });
   },
@@ -220,6 +226,7 @@ Page({
       this._view = target;
       this._view._layerBBox = this._countryLayer.bbox;
       this._highlight = '';
+      this._autoDrillLocked = false;
       this.setData({ level: 'country', currentName: '中国' });
       this.draw();
     });
@@ -258,12 +265,14 @@ Page({
 
   // ---------- 标记弹层 ----------
   openSheet(region) {
+    const mk = this._marks[region.adcode];
     this.setData({
       sheet: {
         name: region.name,
         adcode: region.adcode,
         levelLabel: this.levelLabel(region),
-        status: this._marks[region.adcode] || ''
+        status: mk ? mk.status : '',
+        centerLL: region.centerLL || null
       }
     });
   },
@@ -282,7 +291,10 @@ Page({
   onPickStatus(e) {
     const status = e.currentTarget.dataset.status || '';
     if (!this.data.sheet) return;
-    this._marks = travelStore.set(this.data.sheet.adcode, status);
+    this._marks = travelStore.set(this.data.sheet.adcode, status, {
+      name: this.data.sheet.name,
+      center: this.data.sheet.centerLL
+    });
     this.setData({ sheet: null, stats: travelStore.stats() });
     this.draw();
   }

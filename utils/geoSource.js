@@ -21,7 +21,7 @@ function ensureDir() {
 }
 
 function filePath(adcode) {
-  return DIR + '/' + adcode + '_full.json';
+  return DIR + '/' + adcode + '.json';
 }
 
 function readIndex() {
@@ -89,7 +89,7 @@ function pruneCache(keepAdcode) {
 function fetchText(adcode) {
   return new Promise((resolve, reject) => {
     wx.request({
-      url: config.GEO_BASE + adcode + '_full.json',
+      url: config.GEO_BASE + adcode + '.json',
       method: 'GET',
       timeout: config.TIMEOUT,
       responseType: 'text',
@@ -114,7 +114,7 @@ function fetchText(adcode) {
 function fetchFile(adcode) {
   return new Promise((resolve, reject) => {
     wx.downloadFile({
-      url: config.GEO_BASE + adcode + '_full.json',
+      url: config.GEO_BASE + adcode + '.json',
       timeout: config.TIMEOUT,
       success: (res) => {
         if (res.statusCode !== 200 || !res.tempFilePath) {
@@ -185,7 +185,36 @@ function loadRaw(adcode, opts) {
   });
 }
 
-/** 加载并校验 FeatureCollection */
+/**
+ * 统一成内部结构：properties.adcode / name / level / center
+ * geojson.cn 源字段为 { code, name, fullname, level: 2, center }
+ */
+function normalizeFC(fc) {
+  const features = [];
+  (fc.features || []).forEach((f) => {
+    if (!f || !f.geometry) return;
+    const p = f.properties || {};
+    const adcode = String(p.adcode || p.code || '');
+    if (!adcode) return;
+    const level = p.adcode
+      ? (p.level || '')
+      : (p.level === 2 ? 'city' : (p.level === 3 ? 'district' : (p.level === 1 ? 'province' : String(p.level == null ? '' : p.level))));
+    features.push({
+      type: 'Feature',
+      properties: {
+        adcode: adcode,
+        name: p.fullname || p.name || adcode,
+        level: level,
+        center: p.center || p.centroid || null,
+        centroid: p.centroid || p.center || null
+      },
+      geometry: f.geometry
+    });
+  });
+  return { type: 'FeatureCollection', features: features };
+}
+
+/** 加载并校验 FeatureCollection（字段已归一化） */
 function loadGeoJSON(adcode, opts) {
   return loadRaw(adcode, opts).then((raw) => {
     let fc;
@@ -197,7 +226,9 @@ function loadGeoJSON(adcode, opts) {
     if (!fc || fc.type !== 'FeatureCollection' || !fc.features || !fc.features.length) {
       throw new Error('地图数据格式异常');
     }
-    return fc;
+    const norm = normalizeFC(fc);
+    if (!norm.features.length) throw new Error('地图数据无有效边界');
+    return norm;
   });
 }
 

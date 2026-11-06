@@ -11,8 +11,10 @@ module.exports = {
   INSIGHT_MODEL: 'deepseek-ai/DeepSeek-V3-0324',
   // 单次请求超时（微信上限 60s）
   TIMEOUT: 60000,
-  // 地理边界数据源（阿里 DataV GeoAtlas，静态行政边界，非瓦片服务）
-  GEO_BASE: 'https://geo.datav.aliyun.com/areas_v3/bound/',
+  // 地理边界数据源：geojson.cn（京ICP备16004892号-4，阿里云 OSS/CDN）
+  // 注意：阿里 DataV geo.datav.aliyun.com 有 Referer 防盗链，带 servicewechat.com 的请求一律 403，
+  // 小程序无法自定义 Referer，故不可用。此源实测不校验 Referer。
+  GEO_BASE: 'https://file.geojson.cn/china/1.6.3/',
   // 边界文件本地缓存保留个数（LRU，存于 USER_DATA_PATH/geo/）
   GEO_CACHE_MAX: 8
 };

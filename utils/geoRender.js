@@ -1,8 +1,9 @@
 /**
- * Canvas 2D 绘制：分组合批 fill + 双描边 casing + 高亮 + 九段线
+ * Canvas 2D 绘制：分组合批 fill + 双描边 casing + 高亮 + 九段线 + 足迹打点
  * PALETTE 与 app.wxss 的 CSS 变量值保持一致（canvas 内无法读取 CSS var）。
  * 坐标变换在 JS 完成（不用 ctx.scale），保证 lineWidth 恒定、放大不虚。
  */
+const { project } = require('./geoMap');
 
 const PALETTE = {
   bg: '#16161c',                              // --bg
@@ -43,6 +44,12 @@ function fillColorOf(status) {
   return PALETTE.land;
 }
 
+/** 标记值兼容 v1 字符串与 v2 对象 */
+function statusOf(m) {
+  if (typeof m === 'string') return m;
+  return (m && m.status) || '';
+}
+
 function drawScene(ctx, s) {
   const layer = s.layer;
   const view = s.view;
@@ -64,7 +71,7 @@ function drawScene(ctx, s) {
   const groups = { plain: [], visited: [], want: [] };
   const regions = layer.regions;
   for (let i = 0; i < regions.length; i++) {
-    const st = marks[regions[i].adcode] || '';
+    const st = statusOf(marks[regions[i].adcode]);
     groups[st === 'visited' ? 'visited' : st === 'want' ? 'want' : 'plain'].push(regions[i]);
   }
 
@@ -133,6 +140,31 @@ function drawScene(ctx, s) {
     ctx.strokeStyle = PALETTE.jdStroke;
     ctx.stroke();
   }
+
+  // 6. 足迹打点（全国视图）：市级/区级标记画在城市中心位置，
+  //    避免按省填色导致"一个市去过整省变色"；省级标记(0000)仍走填色。
+  if (s.level === 'country' && layer.proj) {
+    const pr = layer.proj;
+    const rDot = 3.5 * Math.sqrt(Math.max(1, Math.min(view.scale / view.baseScale, 2.5)));
+    for (const k in marks) {
+      const m = marks[k];
+      const st = statusOf(m);
+      if (!st || !m || !m.center || /0000$/.test(k)) continue;
+      const pj = project(m.center[0], m.center[1]);
+      const nx = (pj[0] - pr.minX) / pr.w;
+      const ny = (pr.maxY - pj[1]) / pr.w;
+      const x = nx * scale + tx;
+      const y = ny * scale + ty;
+      if (x < -24 || y < -24 || x > W + 24 || y > H + 24) continue;
+      ctx.beginPath();
+      ctx.arc(x, y, rDot, 0, Math.PI * 2);
+      ctx.fillStyle = st === 'visited' ? PALETTE.visitedStroke : PALETTE.wantStroke;
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#10131a';
+      ctx.stroke();
+    }
+  }
 }
 
 /**
@@ -175,4 +207,4 @@ function createRenderer(canvas, ctx) {
   };
 }
 
-module.exports = { PALETTE, createRenderer, drawScene };
+module.exports = { PALETTE, createRenderer, drawScene, statusOf };

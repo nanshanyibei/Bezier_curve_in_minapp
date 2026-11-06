@@ -116,6 +116,7 @@ function buildLayer(fc, opts) {
       bbox: bb,
       area: area,
       center: center || [(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2],
+      centerLL: it.props.center || null,  // 原始经纬度中心（足迹打点用）
       rings: ringsFull,
       ringsCoarse: ringsCoarse.length ? ringsCoarse : ringsFull
     });
@@ -129,6 +130,8 @@ function buildLayer(fc, opts) {
     level: opts.level || 'country',
     bbox: [0, 0, 1, h / w],
     fitScale: fitScale,
+    // 投影归一化参数（足迹打点：经纬度 → 归一化世界坐标）
+    proj: { minX: minX, minY: minY, maxX: maxX, maxY: maxY, w: w },
     regions: regions,
     jDRings: jdRaw.map(norm) // 九段线（仅描边，不参与命中/填充）
   };

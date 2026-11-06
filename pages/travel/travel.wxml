@@ -12,6 +12,9 @@
     <view class="chip title">{{currentName}}</view>
   </view>
 
+  <!-- 操作提示 -->
+  <view class="hint" wx:if="{{level === 'country' && showHint}}">放大或点省份，查看市界</view>
+
   <!-- 图例 -->
   <view class="legend">
     <view class="legend-item">
@@ -50,7 +53,7 @@
         <view class="sheet-btn s-clear-btn {{!sheet.status ? 'on' : ''}}"
               data-status="" bindtap="onPickStatus">清除</view>
       </view>
-      <view class="sheet-hint text-dim">全国视图长按省份也可直接标记</view>
+      <view class="sheet-hint text-dim">标记会以足迹点的形式显示在全国地图上</view>
     </view>
   </view>
 </view>
