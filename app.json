@@ -1,13 +1,49 @@
 {
   "pages": [
+    "pages/diary/diary",
+    "pages/travel/travel",
+    "pages/assistant/assistant",
+    "pages/tab4/tab4",
+    "pages/tab5/tab5",
     "pages/index/index",
     "pages/share/share"
   ],
   "window": {
     "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#fff",
-    "navigationBarTitleText": "WeChat",
-    "navigationBarTextStyle": "black"
+    "navigationBarBackgroundColor": "#1e1e24",
+    "navigationBarTitleText": "南山工作台",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#8b8b96",
+    "selectedColor": "#6ea8fe",
+    "backgroundColor": "#1e1e24",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/diary/diary",
+        "text": "日记"
+      },
+      {
+        "pagePath": "pages/travel/travel",
+        "text": "旅行"
+      },
+      {
+        "pagePath": "pages/assistant/assistant",
+        "text": "AI 助手"
+      },
+      {
+        "pagePath": "pages/tab4/tab4",
+        "text": "预留"
+      },
+      {
+        "pagePath": "pages/tab5/tab5",
+        "text": "预留"
+      }
+    ]
+  },
+  "networkTimeout": {
+    "request": 60000
   },
   "sitemapLocation": "sitemap.json"
 }

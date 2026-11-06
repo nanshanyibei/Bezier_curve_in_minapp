@@ -1,0 +1,105 @@
+<view class="page">
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="card center">
+    <view class="loading-dots"><view/><view/><view/></view>
+    <view class="text-dim">AI 正在阅读你的日记…</view>
+  </view>
+
+  <!-- 错误 -->
+  <view wx:elif="{{error}}" class="card center">
+    <view class="error-text">{{error}}</view>
+    <button class="btn-ghost" bindtap="onRetry">重试</button>
+  </view>
+
+  <!-- 结果 -->
+  <block wx:elif="{{result}}">
+
+    <!-- 整体状态 -->
+    <view class="card">
+      <view class="card-title">整体状态</view>
+      <view class="overall">{{result.overallState}}</view>
+      <view wx:if="{{result.highlight}}" class="highlight">“{{result.highlight}}”</view>
+      <view class="text-dim">分析范围：近 {{days}} 天 · 可信度 {{result.confidence}}</view>
+    </view>
+
+    <!-- 核心洞察 -->
+    <view wx:if="{{result.insight}}" class="card">
+      <view class="card-title">核心洞察</view>
+      <view>{{result.insight}}</view>
+    </view>
+
+    <!-- 情绪趋势 -->
+    <view wx:if="{{emotionRows.length}}" class="card">
+      <view class="card-title">情绪趋势</view>
+      <view class="emotion-row" wx:for="{{emotionRows}}" wx:key="date" wx:for-item="row">
+        <view class="emotion-date text-dim">{{row.date}}</view>
+        <view class="emotion-bars">
+          <view class="bar-line" wx:for="{{row.dims}}" wx:key="name" wx:for-item="dim">
+            <text class="bar-name">{{dim.name}}</text>
+            <view class="bar-track">
+              <view class="bar-fill" style="width: {{dim.pct}}%; background: {{dim.color}};"></view>
+            </view>
+            <text class="bar-val">{{dim.pct}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 主题 & 人物 -->
+    <view class="card" wx:if="{{result.topics.length || result.people.length}}">
+      <view class="card-title">高频主题与人物</view>
+      <view wx:if="{{result.topics.length}}" class="sub-title">主题</view>
+      <view class="tag-row" wx:if="{{result.topics.length}}">
+        <view class="tag {{item.sentiment}}" wx:for="{{result.topics}}" wx:key="name">
+          {{item.name}} × {{item.count}}
+        </view>
+      </view>
+      <view wx:if="{{result.people.length}}" class="sub-title">人物</view>
+      <view class="tag-row" wx:if="{{result.people.length}}">
+        <view class="tag {{item.sentiment}}" wx:for="{{result.people}}" wx:key="name">
+          {{item.name}} × {{item.count}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 人生变化 -->
+    <view wx:if="{{result.lifeChanges.length}}" class="card">
+      <view class="card-title">人生变化</view>
+      <view class="change-item" wx:for="{{result.lifeChanges}}" wx:key="name">
+        <view class="change-head">
+          <text class="change-name">{{item.name}}</text>
+          <text class="change-dir">{{item.direction === 'up' ? '↑ 上升' : item.direction === 'down' ? '↓ 下降' : item.direction === 'new' ? '✦ 新出现' : item.direction === 'left' ? '← 离开' : '→ 平稳'}}</text>
+        </view>
+        <view class="bar-track">
+          <view class="bar-fill" style="width: {{item.magnitude * 10}}%; background: var(--accent);"></view>
+        </view>
+        <view class="text-dim" wx:if="{{item.interpretation}}">{{item.interpretation}}</view>
+      </view>
+    </view>
+
+    <!-- AI 发现 -->
+    <view wx:if="{{result.aiFindings.length}}" class="card">
+      <view class="card-title">AI 发现</view>
+      <view class="finding-item" wx:for="{{result.aiFindings}}" wx:key="title">
+        <view class="finding-head">
+          <text class="finding-type" style="color: {{item.type === 'risk' ? '#ef7d7d' : item.type === 'growth' ? '#b48ef0' : item.type === 'pattern' ? '#7ed491' : item.type === 'blindspot' || item.type === 'anomaly' ? '#f0b35e' : '#6ea8fe'}};">
+            {{item.type === 'change' ? '变化' : item.type === 'pattern' ? '模式' : item.type === 'risk' ? '风险' : item.type === 'blindspot' ? '盲区' : item.type === 'growth' ? '成长' : '异常'}}
+          </text>
+          <text class="finding-title">{{item.title}}</text>
+        </view>
+        <view wx:if="{{item.evidence}}" class="text-dim">证据：{{item.evidence}}</view>
+        <view wx:if="{{item.suggestion}}" class="finding-suggestion">建议：{{item.suggestion}}</view>
+      </view>
+    </view>
+
+    <!-- 情绪变化描述 -->
+    <view wx:if="{{result.emotionChanges.length}}" class="card">
+      <view class="card-title">情绪变化</view>
+      <view class="change-line" wx:for="{{result.emotionChanges}}" wx:key="*this">· {{item}}</view>
+    </view>
+
+    <!-- 原始 JSON（调试用） -->
+    <view class="raw-toggle" bindtap="onCopyRaw">复制原始 JSON</view>
+  </block>
+</view>

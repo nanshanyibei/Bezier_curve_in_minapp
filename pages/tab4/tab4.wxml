@@ -1,0 +1,5 @@
+<view class="placeholder-page">
+  <view class="placeholder-icon">🚧</view>
+  <view class="placeholder-title">建设中</view>
+  <view class="placeholder-desc">第四个 Tab，功能预留给后续扩展</view>
+</view>

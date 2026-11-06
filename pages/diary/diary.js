@@ -1,0 +1,96 @@
+const diaryStore = require('../../utils/diaryStore');
+
+Page({
+  data: {
+    today: '',
+    selectedDate: '',
+    content: '',
+    entries: [],
+    stats: { count: 0, chars: 0 },
+    editing: false // 编辑的是否为历史日记
+  },
+
+  onLoad() {
+    const t = diaryStore.today();
+    this.setData({
+      today: t,
+      selectedDate: t,
+      content: diaryStore.get(t) || ''
+    });
+  },
+
+  onShow() {
+    this.setData({
+      entries: diaryStore.list(),
+      stats: diaryStore.stats()
+    });
+  },
+
+  onDateChange(e) {
+    const date = e.detail.value;
+    this.setData({
+      selectedDate: date,
+      content: diaryStore.get(date) || '',
+      editing: date !== this.data.today
+    });
+  },
+
+  onInput(e) {
+    this.setData({ content: e.detail.value });
+  },
+
+  onSave() {
+    const d = this.data;
+    if (!d.content.trim()) {
+      wx.showToast({ title: '内容为空', icon: 'none' });
+      return;
+    }
+    diaryStore.save(d.selectedDate, d.content);
+    this.setData({
+      entries: diaryStore.list(),
+      stats: diaryStore.stats()
+    });
+    wx.showToast({ title: '已保存', icon: 'success' });
+  },
+
+  onPickEntry(e) {
+    const date = e.currentTarget.dataset.date;
+    this.setData({
+      selectedDate: date,
+      content: diaryStore.get(date) || '',
+      editing: date !== this.data.today
+    });
+    wx.pageScrollTo({ scrollTop: 0, duration: 200 });
+  },
+
+  onAnalyze(e) {
+    const days = Number(e.currentTarget.dataset.days) || 7;
+    const notes = diaryStore.getRange(days);
+    if (!notes.length) {
+      wx.showToast({ title: '这个范围内还没有日记', icon: 'none' });
+      return;
+    }
+    wx.navigateTo({
+      url: '/pages/insight/insight?days=' + days
+    });
+  },
+
+  onDelete(e) {
+    const date = e.currentTarget.dataset.date;
+    wx.showModal({
+      title: '删除日记',
+      content: '确定删除 ' + date + ' 的日记？',
+      confirmColor: '#ef7d7d',
+      success: (res) => {
+        if (res.confirm) {
+          diaryStore.save(date, '');
+          this.setData({
+            entries: diaryStore.list(),
+            stats: diaryStore.stats(),
+            content: this.data.selectedDate === date ? '' : this.data.content
+          });
+        }
+      }
+    });
+  }
+});
