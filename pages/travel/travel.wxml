@@ -57,6 +57,30 @@
         <text>查看市界</text>
         <text class="sheet-drill-arrow">›</text>
       </view>
+
+      <!-- 当地景点推荐 -->
+      <view class="spots">
+        <view class="spots-head">
+          <text class="spots-title">当地推荐</text>
+          <text class="spots-more {{sheet.spotsLoading ? 'loading' : ''}}"
+                bindtap="onGenAttractions">{{sheet.spotsLoading ? '生成中…' : 'AI 补充'}}</text>
+        </view>
+        <view wx:if="{{!sheet.spotsLoading && sheet.spots.length === 0}}" class="spots-empty text-dim">
+          暂无推荐 · 点右上角让 AI 补充
+        </view>
+        <view wx:for="{{sheet.spots}}" wx:key="name" class="spot">
+          <image wx:if="{{item.img}}" class="spot-img" src="{{item.img}}" mode="aspectFill" />
+          <view wx:else class="spot-img spot-img-ph">{{item.name[0]}}</view>
+          <view class="spot-body">
+            <view class="spot-line1">
+              <text class="spot-name">{{item.name}}</text>
+              <text class="spot-season">{{item.bestMonths || '四季皆宜'}}</text>
+            </view>
+            <view class="spot-desc text-dim">{{item.desc}}</view>
+          </view>
+        </view>
+      </view>
+
       <view class="sheet-hint text-dim">{{sheet.hint}}</view>
     </view>
   </view>

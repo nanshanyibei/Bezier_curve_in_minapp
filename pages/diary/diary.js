@@ -63,6 +63,7 @@ Page({
     wx.pageScrollTo({ scrollTop: 0, duration: 200 });
   },
 
+  /* @dev:begin */
   onAnalyze(e) {
     const days = Number(e.currentTarget.dataset.days) || 7;
     const notes = diaryStore.getRange(days);
@@ -74,6 +75,7 @@ Page({
       url: '/pages/insight/insight?days=' + days
     });
   },
+  /* @dev:end */
 
   onDelete(e) {
     const date = e.currentTarget.dataset.date;

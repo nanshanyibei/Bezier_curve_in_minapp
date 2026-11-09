@@ -2,12 +2,12 @@
   "pages": [
     "pages/diary/diary",
     "pages/travel/travel",
+    "pages/my/my",
     "pages/assistant/assistant",
-    "pages/tab4/tab4",
-    "pages/tab5/tab5",
+    "pages/insight/insight",
     "pages/index/index",
     "pages/share/share",
-    "pages/insight/insight"
+    "pages/my/privacy/privacy"
   ],
   "lazyCodeLoading": "requiredComponents",
   "window": {
@@ -24,23 +24,21 @@
     "list": [
       {
         "pagePath": "pages/diary/diary",
-        "text": "日记"
+        "text": "日记",
+        "iconPath": "assets/tab/diary.png",
+        "selectedIconPath": "assets/tab/diary-active.png"
       },
       {
         "pagePath": "pages/travel/travel",
-        "text": "旅行"
+        "text": "旅行",
+        "iconPath": "assets/tab/travel.png",
+        "selectedIconPath": "assets/tab/travel-active.png"
       },
       {
-        "pagePath": "pages/assistant/assistant",
-        "text": "AI 助手"
-      },
-      {
-        "pagePath": "pages/tab4/tab4",
-        "text": "预留"
-      },
-      {
-        "pagePath": "pages/tab5/tab5",
-        "text": "预留"
+        "pagePath": "pages/my/my",
+        "text": "我的",
+        "iconPath": "assets/tab/my.png",
+        "selectedIconPath": "assets/tab/my-active.png"
       }
     ]
   },

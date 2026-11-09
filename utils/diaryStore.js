@@ -52,7 +52,7 @@ function get(date) {
   return hit ? hit.text : '';
 }
 
-/** 最近 days 天有内容的日记（旧→新，供 AI 分析） */
+/** 最近 days 天有内容的日记（旧→新，供回顾与导出） */
 function getRange(days) {
   const from = new Date();
   from.setDate(from.getDate() - days + 1);
@@ -73,4 +73,4 @@ function stats() {
   return { count: entries.length, chars: chars };
 }
 
-module.exports = { today, list, save, get, getRange, stats };
+module.exports = { KEY, today, list, save, get, getRange, stats };

@@ -1,0 +1,59 @@
+<view class="page">
+
+  <view class="hero">
+    <view class="hero-title">南山工作台</view>
+    <view class="text-dim hero-sub">日记 · 旅行 · 本地存储</view>
+  </view>
+
+  <!-- 数据概览 -->
+  <view class="stats-row">
+    <view class="stats-item">
+      <view class="stats-num">{{diaryCount}}</view>
+      <view class="text-dim">日记篇数</view>
+    </view>
+    <view class="stats-item">
+      <view class="stats-num">{{diaryChars}}</view>
+      <view class="text-dim">累计字数</view>
+    </view>
+    <view class="stats-item">
+      <view class="stats-num">{{visitedCount}}</view>
+      <view class="text-dim">去过</view>
+    </view>
+  </view>
+
+  <!-- @dev:begin -->
+  <view class="card row" bindtap="onAiAssistant">
+    <view class="row-main">
+      <view class="row-title">AI 助手</view>
+      <view class="text-dim">软考备考问答</view>
+    </view>
+    <text class="row-arrow">›</text>
+  </view>
+
+  <view class="card row" bindtap="onPoster">
+    <view class="row-main">
+      <view class="row-title">分享海报</view>
+      <view class="text-dim">生成一张个人海报</view>
+    </view>
+    <text class="row-arrow">›</text>
+  </view>
+  <!-- @dev:end -->
+
+  <view class="card row" bindtap="onPrivacy">
+    <view class="row-main">
+      <view class="row-title">隐私保护指引</view>
+      <view class="text-dim">数据如何存储与使用</view>
+    </view>
+    <text class="row-arrow">›</text>
+  </view>
+
+  <view class="card row" bindtap="onAbout">
+    <view class="row-main">
+      <view class="row-title">关于</view>
+      <view class="text-dim">版本与说明</view>
+    </view>
+    <text class="row-arrow">›</text>
+  </view>
+
+  <view class="footer text-dim">v{{version}} · 所有数据仅保存在本机</view>
+</view>

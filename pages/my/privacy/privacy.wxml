@@ -1,0 +1,31 @@
+<view class="page">
+
+  <view class="card">
+    <view class="card-title">我们收集什么</view>
+    <view class="para">本小程序不收集、不上传任何个人信息。日记内容、旅行标记仅保存在你手机的小程序本地缓存中。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">数据存储位置</view>
+    <view class="para">所有数据通过微信小程序本地缓存（Storage）保存在本机，不经过任何服务器，开发者无法读取。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">网络请求说明</view>
+    <view class="para">旅行地图需要加载中国行政区划边界文件，该请求仅下载公开地理数据（来源 geojson.cn），不携带任何个人数据，也不上传你的标记记录。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">你的控制权</view>
+    <view class="para">你可以随时在日记页删除单篇内容，或点击下方按钮一次性清除全部本地数据。卸载小程序同样会清除所有缓存。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">未成年人保护</view>
+    <view class="para">本工具不含社交与内容发布功能，日记内容仅本机可见。未成年人可在监护人指导下使用。</view>
+  </view>
+
+  <button class="btn-danger clear-btn" bindtap="onClearAll">清除本机全部数据</button>
+
+  <view class="footer text-dim">更新日期：2026-11-09 · v{{version}}</view>
+</view>

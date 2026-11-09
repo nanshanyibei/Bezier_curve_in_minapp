@@ -3,10 +3,12 @@ const geoMap = require('../../utils/geoMap');
 const geoRender = require('../../utils/geoRender');
 const geoGesture = require('../../utils/geoGesture');
 const travelStore = require('../../utils/travelStore');
+const cb = require('../../utils/cb');
+const seed = require('../../assets/data/attractions-seed');
 
 const COUNTRY = '100000';
 const ANIM_MS = 240;
-// 直辖市：不下钻到区，整市直接标记
+// 直辖市（仅用于弹层文案标注，可正常下钻到区）
 const MUNICIPALITIES = { 110000: 1, 120000: 1, 310000: 1, 500000: 1 };
 
 Page({
@@ -37,11 +39,20 @@ Page({
   _highlight: '',
   _domainWarned: false,
   _sheetRegion: null,
+  _provinceAdcode: '', // 省级层当前省份 adcode（区级景点查省级兜底用）
 
   onLoad() {
     this._marks = travelStore.getAll();
     this._gs = geoGesture.createState();
     this.setData({ stats: travelStore.stats() });
+    // 云端标记合并（新者胜），异步不打断首屏
+    travelStore.pullCloud().then((r) => {
+      if (r && r.changed) {
+        this._marks = r.marks;
+        this.setData({ stats: travelStore.stats() });
+        this.draw();
+      }
+    });
   },
 
   onReady() {
@@ -154,6 +165,7 @@ Page({
   drillTo(region) {
     if (this.data.loading) return;
     this.setData({ loading: true, progress: 0, loadingText: '正在加载' + region.name + '…', showHint: false });
+    this._provinceAdcode = region.adcode;
     geoMap.getLayer(region.adcode, { level: 'province' }).then((layer) => {
       this._highlight = region.adcode;
       const target = geoMap.fitView(layer.bbox, this._W, this._H, 24);
@@ -193,6 +205,7 @@ Page({
       this._view = target;
       this._view._layerBBox = this._countryLayer.bbox;
       this._highlight = '';
+      this._provinceAdcode = '';
       this.setData({ level: 'country', currentName: '中国' });
       this.draw();
     });
@@ -233,13 +246,9 @@ Page({
   openSheet(region) {
     const mk = this._marks[region.adcode];
     const isCountry = this.data.level === 'country';
-    const isMuni = !!MUNICIPALITIES[region.adcode];
-    let hint = '标记会以足迹点的形式显示在全国地图上';
-    if (isCountry) {
-      hint = isMuni
-        ? '直辖市按整市标记，不再下钻到区'
-        : '标记以足迹点显示在中国地图上 · 点「查看市界」可标记到城市';
-    }
+    const hint = isCountry
+      ? '标记以足迹点显示在中国地图上 · 点「查看市界」可下钻标记下级区域'
+      : '标记会以足迹点的形式显示在全国地图上';
     this._sheetRegion = region;
     this.setData({
       sheet: {
@@ -248,9 +257,55 @@ Page({
         levelLabel: this.levelLabel(region),
         status: mk ? mk.status : '',
         centerLL: region.centerLL || null,
-        canDrill: isCountry && !isMuni,
-        hint: hint
+        canDrill: isCountry,
+        hint: hint,
+        spots: [],
+        spotsLoading: true
       }
+    });
+    this.loadSpots(region, false);
+  },
+
+  /** 当前查询的省级兜底 adcode：全国层=region 本身（省）；省级层=adcode 截断到省 */
+  fallbackProvinceCode(region) {
+    if (this.data.level === 'country') return region.adcode;
+    const code = String(region.adcode);
+    return code.length >= 6 ? (parseInt(code.slice(0, 2), 10) * 10000) + '00' : code;
+  },
+
+  /** 兜底省级名称（AI 提示词用） */
+  parentName() {
+    return this.data.level === 'province' ? this.data.currentName : '';
+  },
+
+  /** 弹层景点：云端查询（带缓存）→ 空则用种子兜底 */
+  loadSpots(region, forceRefresh) {
+    const adcode = String(region.adcode);
+    const fb = this.fallbackProvinceCode(region);
+    cb.fetchAttractions(adcode, fb, 6).then((list) => {
+      if (this._sheetRegion !== region) return; // 弹层已切换/关闭
+      let spots = list;
+      if (!spots.length) spots = seed.byAdcode(adcode).map((s) => ({
+        name: s.name, desc: s.desc, img: s.img, bestMonths: s.bestMonths, tags: s.tags
+      }));
+      this.setData({ 'sheet.spots': spots, 'sheet.spotsLoading': false });
+    });
+  },
+
+  /** 「AI 补充更多」：云函数 LLM 生成并写库，成功后刷新弹层 */
+  onGenAttractions() {
+    const region = this._sheetRegion;
+    if (!region || !this.data.sheet || this.data.sheet.spotsLoading) return;
+    if (!cb.sdkAvailable() || !cb.envConfigured()) {
+      wx.showToast({ title: '未配置云端，无法 AI 补充', icon: 'none' });
+      return;
+    }
+    this.setData({ 'sheet.spotsLoading': true });
+    cb.genAttractions(String(region.adcode), region.name, this.parentName()).then((list) => {
+      if (this._sheetRegion !== region) return;
+      const spots = list.length ? list : this.data.sheet.spots;
+      this.setData({ 'sheet.spots': spots, 'sheet.spotsLoading': false });
+      if (!list.length) wx.showToast({ title: '生成失败，稍后再试', icon: 'none' });
     });
   },
 

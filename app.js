@@ -1,6 +1,7 @@
 //app.js
 
 App({
+  /* @dev:begin */
   onLaunch(){
     const that = this
     wx.getUserInfo({
@@ -17,6 +18,7 @@ App({
       }
     })
   },
+  /* @dev:end */
   onShow(e){
     if(e.shareTicket){
       this.globalData.shareTicket = e.shareTicket

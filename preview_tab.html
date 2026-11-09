@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Tabbar 图标预览</title>
+<style>
+  body { background:#141418; color:#e8e8ee; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; margin:0; padding:40px; display:flex; flex-direction:column; align-items:center; gap:32px; }
+  h1 { font-size:18px; font-weight:600; color:#c9cdd6; margin:0; }
+  .bar { display:flex; background:#1e1e24; border-radius:14px; padding:10px 8px; width:420px; justify-content:space-around; box-shadow:0 4px 24px rgba(0,0,0,.4); }
+  .tab { display:flex; flex-direction:column; align-items:center; gap:4px; width:90px; }
+  .tab img { width:27px; height:27px; }
+  .tab span { font-size:11px; }
+  .tab.off span { color:#9aa0b0; }
+  .tab.on span { color:#6ea8fe; }
+  .zoom { display:flex; gap:40px; }
+  .zoom .item { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .zoom img { width:162px; height:162px; background:repeating-conic-gradient(#23232a 0 25%, #1a1a20 0 50%) 0 0/24px 24px; border-radius:16px; padding:16px; box-sizing:content-box; }
+  .zoom span { font-size:13px; color:#9aa0b0; }
+</style>
+</head>
+<body>
+  <h1>模拟 TabBar（实际显示尺寸 27px）</h1>
+  <div class="bar">
+    <div class="tab on"><img src="assets/tab/diary-active.png"><span>日记</span></div>
+    <div class="tab off"><img src="assets/tab/travel.png"><span>旅行</span></div>
+    <div class="tab off"><img src="assets/tab/my.png"><span>我的</span></div>
+  </div>
+  <h1>放大预览（默认态 / 选中态）</h1>
+  <div class="zoom">
+    <div class="item"><img src="assets/tab/diary.png"><span>日记 默认</span></div>
+    <div class="item"><img src="assets/tab/diary-active.png"><span>日记 选中</span></div>
+    <div class="item"><img src="assets/tab/travel.png"><span>旅行 默认</span></div>
+    <div class="item"><img src="assets/tab/travel-active.png"><span>旅行 选中</span></div>
+    <div class="item"><img src="assets/tab/my.png"><span>我的 默认</span></div>
+    <div class="item"><img src="assets/tab/my-active.png"><span>我的 选中</span></div>
+  </div>
+</body>
+</html>

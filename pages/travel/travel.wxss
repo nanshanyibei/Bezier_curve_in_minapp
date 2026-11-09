@@ -212,3 +212,95 @@
   margin-top: 24rpx;
   font-size: 22rpx;
 }
+
+/* ---------- 景点推荐区 ---------- */
+.spots {
+  margin-top: 28rpx;
+  border-top: 1rpx solid var(--border);
+  padding-top: 24rpx;
+}
+
+.spots-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.spots-title {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.spots-more {
+  font-size: 24rpx;
+  color: var(--accent);
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  background: rgba(110, 168, 254, 0.12);
+}
+
+.spots-more.loading {
+  color: var(--text-dim);
+}
+
+.spots-empty {
+  font-size: 24rpx;
+  text-align: center;
+  padding: 24rpx 0;
+}
+
+.spot {
+  display: flex;
+  gap: 20rpx;
+  padding: 16rpx 0;
+}
+
+.spot-img {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 16rpx;
+  flex-shrink: 0;
+}
+
+.spot-img-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #6ea8fe, #7ed491);
+}
+
+.spot-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.spot-line1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12rpx;
+}
+
+.spot-name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.spot-season {
+  font-size: 22rpx;
+  color: var(--orange);
+  flex-shrink: 0;
+}
+
+.spot-desc {
+  font-size: 24rpx;
+  margin-top: 6rpx;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}

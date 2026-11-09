@@ -1,0 +1,19 @@
+.page {
+  padding: 32rpx 28rpx 60rpx;
+}
+
+.para {
+  font-size: 26rpx;
+  color: var(--text-dim);
+  line-height: 1.8;
+}
+
+.clear-btn {
+  margin-top: 16rpx;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 40rpx;
+  font-size: 22rpx;
+}
