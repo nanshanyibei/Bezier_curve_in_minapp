@@ -1,4 +1,5 @@
 {
   "usingComponents": {},
-  "navigationBarTitleText": "隐私保护指引"
+  "navigationBarTitleText": "隐私保护指引",
+  "backgroundColorContent": "#16161c"
 }

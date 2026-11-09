@@ -1,5 +1,6 @@
 {
   "usingComponents": {},
   "navigationBarTitleText": "旅行",
-  "disableScroll": true
+  "disableScroll": true,
+  "backgroundColorContent": "#16161c"
 }

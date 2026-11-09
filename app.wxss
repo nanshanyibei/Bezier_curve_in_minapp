@@ -21,6 +21,12 @@ page {
   line-height: 1.6;
 }
 
+/* 页面容器兜底深色底：iOS 快速切 tab 时首帧避免透出白色窗口底 */
+.page {
+  min-height: 100vh;
+  background-color: var(--bg);
+}
+
 /* 通用卡片 */
 .card {
   background: var(--bg-card);

@@ -1,4 +1,3 @@
-const fullFC = require('../../assets/geo/china-full.js');
 const geoMap = require('../../utils/geoMap');
 const geoRender = require('../../utils/geoRender');
 const geoGesture = require('../../utils/geoGesture');
@@ -59,6 +58,11 @@ Page({
     this.initCanvas();
   },
 
+  onShow() {
+    // iOS 切走再切回时 canvas 位图可能被系统回收，立即重绘避免空白一帧
+    if (this._renderer) this.draw();
+  },
+
   onHide() {
     geoGesture.cancel(this._gs);
     this._animToken++;
@@ -95,17 +99,23 @@ Page({
         this._H = height;
         this._renderer = geoRender.createRenderer(node, ctx);
 
-        // 全国精确边界已打包进小程序（assets/geo/china-full.js），无需网络
-        try {
-          this._layer = geoMap.buildLayer(fullFC, { level: 'country', adcode: COUNTRY });
-          this._countryLayer = this._layer;
-          this._view = geoMap.fitView(this._layer.bbox, width, height, 16);
-          this._view._layerBBox = this._layer.bbox;
-          this.draw();
-        } catch (e) {
-          this.setData({ error: '地图初始化失败：' + e.message });
-          return;
-        }
+        // 全国精确边界在分包 subpackages/geo 中，跨分包异步加载（分包异步化）
+        require.async('../../subpackages/geo/china-full.js')
+          .then((fc) => {
+            this._fullFC = fc; // 缓存，避免重复跨分包加载
+            try {
+              this._layer = geoMap.buildLayer(fc, { level: 'country', adcode: COUNTRY });
+              this._countryLayer = this._layer;
+              this._view = geoMap.fitView(this._layer.bbox, width, height, 16);
+              this._view._layerBBox = this._layer.bbox;
+              this.draw();
+            } catch (e) {
+              this.setData({ error: '地图初始化失败：' + e.message });
+            }
+          })
+          .catch((e) => {
+            this.setData({ error: '地图数据加载失败：' + ((e && e.message) || e) });
+          });
       });
   },
 

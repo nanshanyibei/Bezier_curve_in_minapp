@@ -9,6 +9,14 @@
     "pages/share/share",
     "pages/my/privacy/privacy"
   ],
+  "subpackages": [
+    {
+      "root": "subpackages/geo",
+      "pages": [
+        "pages/place/place"
+      ]
+    }
+  ],
   "lazyCodeLoading": "requiredComponents",
   "window": {
     "backgroundTextStyle": "light",
