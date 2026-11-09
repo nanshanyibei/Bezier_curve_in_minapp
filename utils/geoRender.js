@@ -141,7 +141,26 @@ function drawScene(ctx, s) {
     ctx.stroke();
   }
 
-  // 6. 足迹打点（全国视图）：市级/区级标记画在城市中心位置，
+  // 6. 名称标注（省名/市名，压在填充上、足迹点之下）
+  if (layer.proj && layer.regions.length) {
+    const pr = layer.proj;
+    const fontSize = s.level === 'country' ? 10 : 9;
+    ctx.font = fontSize + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(190,200,215,0.75)';
+    for (let i = 0; i < layer.regions.length; i++) {
+      const r = layer.regions[i];
+      if (!r.centerLL || !r.name) continue;
+      const pj = project(r.centerLL[0], r.centerLL[1]);
+      const x = ((pj[0] - pr.minX) / pr.w) * scale + tx;
+      const y = ((pr.maxY - pj[1]) / pr.w) * scale + ty;
+      if (x < -40 || y < -40 || x > W + 40 || y > H + 40) continue;
+      ctx.fillText(r.name, x, y);
+    }
+  }
+
+  // 7. 足迹打点（全国视图）：市级/区级标记画在城市中心位置，
   //    避免按省填色导致"一个市去过整省变色"；省级标记(0000)仍走填色。
   if (s.level === 'country' && layer.proj) {
     const pr = layer.proj;

@@ -6,6 +6,8 @@ const travelStore = require('../../utils/travelStore');
 
 const COUNTRY = '100000';
 const ANIM_MS = 240;
+// 直辖市：不下钻到区，整市直接标记
+const MUNICIPALITIES = { 110000: 1, 120000: 1, 310000: 1, 500000: 1 };
 
 Page({
   data: {
@@ -34,12 +36,11 @@ Page({
   _animToken: 0,
   _highlight: '',
   _domainWarned: false,
-  _netWarned: false,
-  _autoDrillLocked: false,
+  _sheetRegion: null,
 
   onLoad() {
     this._marks = travelStore.getAll();
-    this._gs = geoGesture.createState((x, y) => this.handleLongPress(x, y));
+    this._gs = geoGesture.createState();
     this.setData({ stats: travelStore.stats() });
   },
 
@@ -134,22 +135,6 @@ Page({
     if (!this._view) return;
     const r = geoGesture.end(this._gs, e.touches);
     if (r.gesture === 'tap') this.handleTap(r.x, r.y);
-    // 长按已在回调里处理
-    this.maybeAutoDrill();
-  },
-
-  /** 放大到阈值自动下钻视野中心所在省（放大即出市界）；缩到阈值外自动回全国 */
-  maybeAutoDrill() {
-    if (this.data.loading || this._autoDrillLocked) return;
-    const ratio = this._view.scale / this._view.baseScale;
-    if (this.data.level === 'country') {
-      if (ratio < 2.2) return;
-      const wpt = geoMap.screenToWorld(this._view, this._W / 2, this._H / 2);
-      const region = geoMap.hitTest(this._layer, wpt[0], wpt[1]);
-      if (region) this.drillTo(region, { silent: true });
-    } else if (this.data.level === 'province' && ratio <= 0.6) {
-      this.onBack();
-    }
   },
 
   onTouchCancel() {
@@ -161,22 +146,13 @@ Page({
     const wpt = geoMap.screenToWorld(this._view, x, y);
     const region = geoMap.hitTest(this._layer, wpt[0], wpt[1]);
     if (!region) return;
-    if (this.data.level === 'country') {
-      this.drillTo(region);
-    } else {
-      this.openSheet(region);
-    }
-  },
-
-  handleLongPress(x, y) {
-    // 与单击一致：全国层下钻省份，省级层打开标记弹层
-    this.handleTap(x, y);
+    // 全国层单击=标记省份/直辖市；省级层单击=标记城市
+    this.openSheet(region);
   },
 
   // ---------- 下钻 / 返回 ----------
-  drillTo(region, opts) {
+  drillTo(region) {
     if (this.data.loading) return;
-    const silent = !!(opts && opts.silent);
     this.setData({ loading: true, progress: 0, loadingText: '正在加载' + region.name + '…', showHint: false });
     geoMap.getLayer(region.adcode, { level: 'province' }).then((layer) => {
       this._highlight = region.adcode;
@@ -196,15 +172,6 @@ Page({
       this.setData({ loading: false });
       const msg = (err && err.message) || '';
       console.error('[travel] 下钻加载失败:', region.name, msg);
-      // 自动触发（缩放）失败：锁住，避免每次手势反复重试；静默提示
-      if (silent) {
-        this._autoDrillLocked = true;
-        if (!this._netWarned) {
-          this._netWarned = true;
-          wx.showToast({ title: '市界数据需联网加载', icon: 'none' });
-        }
-        return;
-      }
       if (msg.indexOf('domain list') >= 0 && !this._domainWarned) {
         this._domainWarned = true;
         wx.showModal({
@@ -226,7 +193,6 @@ Page({
       this._view = target;
       this._view._layerBBox = this._countryLayer.bbox;
       this._highlight = '';
-      this._autoDrillLocked = false;
       this.setData({ level: 'country', currentName: '中国' });
       this.draw();
     });
@@ -266,23 +232,46 @@ Page({
   // ---------- 标记弹层 ----------
   openSheet(region) {
     const mk = this._marks[region.adcode];
+    const isCountry = this.data.level === 'country';
+    const isMuni = !!MUNICIPALITIES[region.adcode];
+    let hint = '标记会以足迹点的形式显示在全国地图上';
+    if (isCountry) {
+      hint = isMuni
+        ? '直辖市按整市标记，不再下钻到区'
+        : '标记以足迹点显示在中国地图上 · 点「查看市界」可标记到城市';
+    }
+    this._sheetRegion = region;
     this.setData({
       sheet: {
         name: region.name,
         adcode: region.adcode,
         levelLabel: this.levelLabel(region),
         status: mk ? mk.status : '',
-        centerLL: region.centerLL || null
+        centerLL: region.centerLL || null,
+        canDrill: isCountry && !isMuni,
+        hint: hint
       }
     });
   },
 
+  /** 弹层「查看市界」：先关弹层（遮罩会挡住切层动画），再复用 drillTo */
+  onDrill() {
+    const region = this._sheetRegion;
+    if (!region || !this.data.sheet || !this.data.sheet.canDrill) return;
+    if (this.data.loading) return;
+    this.closeSheet();
+    this.drillTo(region);
+  },
+
   levelLabel(region) {
-    if (this.data.level === 'country') return '省级';
+    if (this.data.level === 'country') {
+      return MUNICIPALITIES[region.adcode] ? '直辖市' : '省';
+    }
     return region.level === 'district' ? '区' : '市';
   },
 
   closeSheet() {
+    this._sheetRegion = null;
     this.setData({ sheet: null });
   },
 
@@ -291,11 +280,12 @@ Page({
   onPickStatus(e) {
     const status = e.currentTarget.dataset.status || '';
     if (!this.data.sheet) return;
-    this._marks = travelStore.set(this.data.sheet.adcode, status, {
-      name: this.data.sheet.name,
-      center: this.data.sheet.centerLL
-    });
-    this.setData({ sheet: null, stats: travelStore.stats() });
+    const adcode = this.data.sheet.adcode;
+    const name = this.data.sheet.name;
+    const center = this.data.sheet.centerLL;
+    this.closeSheet();
+    this._marks = travelStore.set(adcode, status, { name: name, center: center });
+    this.setData({ stats: travelStore.stats() });
     this.draw();
   }
 });

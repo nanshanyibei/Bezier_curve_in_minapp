@@ -6,8 +6,10 @@
     "pages/tab4/tab4",
     "pages/tab5/tab5",
     "pages/index/index",
-    "pages/share/share"
+    "pages/share/share",
+    "pages/insight/insight"
   ],
+  "lazyCodeLoading": "requiredComponents",
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#1e1e24",
