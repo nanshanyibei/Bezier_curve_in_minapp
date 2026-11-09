@@ -12,6 +12,9 @@
   "lazyCodeLoading": "requiredComponents",
   "window": {
     "backgroundTextStyle": "light",
+    "backgroundColor": "#16161c",
+    "backgroundColorTop": "#16161c",
+    "backgroundColorBottom": "#16161c",
     "navigationBarBackgroundColor": "#1e1e24",
     "navigationBarTitleText": "南山工作台",
     "navigationBarTextStyle": "white"

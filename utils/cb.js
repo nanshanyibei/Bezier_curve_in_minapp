@@ -27,9 +27,9 @@ function envConfigured() {
   return config.CLOUDBASE_ENV && config.CLOUDBASE_ENV !== 'YOUR_ENV_ID';
 }
 
-/** 初始化 + 匿名登录；失败/未配置返回 null */
+/** 初始化 + 匿名登录；永远返回 Promise<app|null>（不可用/失败时 resolve null） */
 function ready() {
-  if (!sdkAvailable() || !envConfigured()) return null;
+  if (!sdkAvailable() || !envConfigured()) return Promise.resolve(null);
   if (_readyPromise) return _readyPromise;
   try {
     const cloudbase = require('@cloudbase/js-sdk');
@@ -45,7 +45,7 @@ function ready() {
     return _readyPromise;
   } catch (e) {
     console.error('[cb] 初始化失败:', e.message);
-    return null;
+    return Promise.resolve(null);
   }
 }
 
