@@ -8,6 +8,18 @@
       },
       {
         "type": "folder",
+        "value": ".tmpff"
+      },
+      {
+        "type": "file",
+        "value": "preview_tab.html"
+      },
+      {
+        "type": "file",
+        "value": ".gitignore"
+      },
+      {
+        "type": "folder",
         "value": "dist"
       },
       {
