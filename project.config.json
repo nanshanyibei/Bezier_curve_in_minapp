@@ -87,6 +87,7 @@
     }
   },
   "compileType": "miniprogram",
+  "cloudfunctionRoot": "cloudfunctions/",
   "libVersion": "3.17.6",
   "appid": "wx19971a62016469bf",
   "projectname": "Bezier_curve_in_minapp_DEV",

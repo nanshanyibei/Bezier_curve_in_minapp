@@ -27,7 +27,7 @@ module.exports = {
   // CloudBase 通用版（腾讯云控制台开通，tcb.cloud.tencent.com）
   // 免费体验版 3000 资源点/月。envId 在控制台「环境-概览」页复制，替换占位符后生效。
   // 未配置 / 未构建 npm 时，云端功能自动降级为纯本地模式。
-  CLOUDBASE_ENV: 'YOUR_ENV_ID',
+  CLOUDBASE_ENV: 'eligible-gorilla-d4e0n4kdadfbdc4d',
 
   // 景点本地缓存有效期（毫秒，7 天）
   ATTRACTION_CACHE_TTL: 7 * 24 * 3600 * 1000
