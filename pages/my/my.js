@@ -15,6 +15,14 @@ Page({
   },
 
   onShow() {
+    this.refresh();
+    this.refreshSync();
+    // 启动同步（登录 + 云端回灌）可能晚于本页渲染，完成后补刷一次
+    const p = getApp() && getApp().globalData && getApp().globalData.syncPromise;
+    if (p) p.then(() => { this.refresh(); this.refreshSync(); });
+  },
+
+  refresh() {
     const d = diaryStore.stats();
     const t = travelStore.stats();
     this.setData({
@@ -22,7 +30,6 @@ Page({
       diaryChars: d.chars,
       visitedCount: t.visited
     });
-    this.refreshSync();
   },
 
   /** 云端登录态展示：已登录 = 数据跟微信走，删小程序也能找回 */

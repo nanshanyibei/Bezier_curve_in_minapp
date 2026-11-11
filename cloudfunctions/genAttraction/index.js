@@ -1,20 +1,107 @@
 /**
  * 云函数 genAttraction：按需生成景点推荐
- * 入参：{ adcode, name, parent? }
- * 流程：硅基流动 LLM 生成 5 条 → JSON 校验 → 写 attractions 集合（source: 'llm'）→ 返回列表
- * 环境变量（云函数控制台配置）：SILICONFLOW_KEY（必填）、SILICONFLOW_MODEL（可选）
+ *
+ * 入参（HTTP 网关路由 /genAttraction，body 即业务参数）：
+ *   { adcode, name, parent?, token, llmKey? }
+ * 流程：校验身份 → 已有 llm 数据则直接返回 → LLM 生成 5 条 → 校验 → 写 attractions → 返回全量
+ *
+ * 环境变量：
+ *   WX_APPID / WX_SECRET   与 wxauth 同值；配置后强制校验 token（防止公网裸调烧额度）
+ *   SILICONFLOW_KEY        推荐配置；未配置时退用请求体里的 llmKey（开发期过渡，勿长期依赖）
+ *   SILICONFLOW_MODEL      可选
+ *
+ * pgdoc 两个坑（与 wxauth 同源，已处理）：
+ *   1. node-sdk 读到的文档是 { _id, data: {...} } 两层，需 unwrap；
+ *   2. where 匹配不到顶层字段，要写 'data.adcode'；查不到时退回全表 + JS 过滤。
  */
 const cloudbase = require('@cloudbase/node-sdk');
+const crypto = require('crypto');
 
 const app = cloudbase.init({ env: cloudbase.SYMBOL_CURRENT_ENV });
 const db = app.database();
 
+const COL = 'attractions';
 const LLM_BASE = 'https://api.siliconflow.cn/v1/chat/completions';
 const MODEL = process.env.SILICONFLOW_MODEL || 'deepseek-ai/DeepSeek-V3-0324';
 
-function callLLM(prompt) {
-  const key = process.env.SILICONFLOW_KEY;
-  if (!key) return Promise.reject(new Error('未配置环境变量 SILICONFLOW_KEY'));
+const APPID = process.env.WX_APPID;
+const SECRET = process.env.WX_SECRET;
+const MAX_LLM_SPOTS = 12; // 单 adcode 的 llm 数据上限，超过不再调模型
+
+/** HTTP 网关路由下 event 被包成 { path, httpMethod, headers, body } */
+function normalizeEvent(event) {
+  let e = event || {};
+  if (typeof e.body === 'string') {
+    try { e = JSON.parse(e.body); } catch (err) { e = {}; }
+  } else if (e.body && typeof e.body === 'object') {
+    e = e.body;
+  }
+  return e || {};
+}
+
+// ---------- token（与 wxauth 同算法） ----------
+
+function tokenKey() {
+  return crypto.createHash('sha256').update('tcb|' + APPID + '|' + SECRET).digest();
+}
+
+function verifyToken(token) {
+  if (!token || typeof token !== 'string') return '';
+  const parts = token.split('.');
+  if (parts.length !== 2) return '';
+  const expect = crypto.createHmac('sha256', tokenKey()).update(parts[0]).digest('base64url');
+  const a = Buffer.from(parts[1]);
+  const b = Buffer.from(expect);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return '';
+  try {
+    const obj = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    if (!obj || !obj.o || !obj.e || obj.e < Date.now()) return '';
+    return obj.o;
+  } catch (e) {
+    return '';
+  }
+}
+
+/** 应用密钥：环境变量优先，其次请求体透传（开发期过渡） */
+function llmKey(e) {
+  return process.env.SILICONFLOW_KEY || (e && e.llmKey) || '';
+}
+
+/** 剥掉 pgdoc 的 data 包装 */
+function unwrap(d) {
+  if (d && d.data && typeof d.data === 'object' && !Array.isArray(d.data)) {
+    return Object.assign({ _id: d._id }, d.data);
+  }
+  return d;
+}
+
+function shape(d) {
+  return {
+    name: d.name || '',
+    desc: d.desc || '',
+    img: d.img || '',
+    bestMonths: d.bestMonths || '',
+    tags: d.tags || []
+  };
+}
+
+/** 取某 adcode 下已有景点（两条路径都试，绕开 pgdoc 的 where 语义差异） */
+async function listByAdcode(adcode) {
+  const key = String(adcode);
+  try {
+    const r = await db.collection(COL).where({ 'data.adcode': key }).limit(100).get();
+    const list = (r.data || []).map(unwrap).filter((d) => String(d.adcode) === key);
+    if (list.length) return list;
+  } catch (e) { /* 落到全表兜底 */ }
+  try {
+    const all = await db.collection(COL).limit(500).get();
+    return (all.data || []).map(unwrap).filter((d) => String(d.adcode) === key);
+  } catch (e) {
+    return [];
+  }
+}
+
+function callLLM(prompt, key) {
   const body = JSON.stringify({
     model: MODEL,
     messages: [{ role: 'user', content: prompt }],
@@ -76,39 +163,70 @@ function validate(list, adcode) {
   }));
 }
 
+/** 稳定 _id：同一 adcode + 同名景点重跑不重复写 */
+function docId(adcode, name) {
+  let h = 5381;
+  const s = String(name);
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return 'llm_' + adcode + '_' + h.toString(36);
+}
+
+async function save(spot) {
+  const id = docId(spot.adcode, spot.name);
+  try {
+    // 直接传文档体，避免 pgdoc 下多包一层 data
+    await db.collection(COL).doc(id).set(spot);
+  } catch (e) {
+    console.error('[genAttraction] set 失败，尝试 add:', e.message);
+    await db.collection(COL).add(spot);
+  }
+}
+
 exports.main = async (event) => {
-  const { adcode, name, parent } = event || {};
+  const e = normalizeEvent(event);
+
+  // 配了密钥就强制鉴权，避免公网裸调消耗 LLM 额度
+  if (APPID && SECRET) {
+    const openid = verifyToken(e.token);
+    if (!openid) return { code: 401, msg: 'UNAUTHORIZED', list: [] };
+  }
+
+  const adcode = e.adcode;
+  const name = e.name;
+  const parent = e.parent;
   if (!adcode || !name) return { code: 1, msg: '缺少 adcode/name' };
 
-  const scope = parent ? parent + name : name;
-  const prompt = '你是旅行顾问。请推荐 ' + scope + '（行政区划代码 ' + adcode + '）最有代表性的 5 个景点或体验，'
-    + '每个包含字段：name（名称，不超过15字）、desc（一句话亮点介绍，不超过60字，突出特色，不要套话）、'
-    + 'bestMonths（最适合游玩的月份，格式如 "4-6,9-10"，全年皆宜写 "四季皆宜"）、'
-    + 'tags（1-3个标签，从 自然/人文/美食/夜景观赏/亲子/徒步/海岛/古镇/冰雪/温泉 中选）。'
-    + '只输出 JSON 数组，不要任何其他文字。';
+  const key = llmKey(e);
+  if (!key) return { code: 2, msg: 'NO_LLM_KEY', list: [] };
 
   try {
-    const content = await callLLM(prompt);
+    // 已有足够的 llm 数据就不再调模型（省额度，也防重复触发）
+    const exist = await listByAdcode(adcode);
+    const llmCount = exist.filter((d) => d.source === 'llm').length;
+    if (llmCount >= MAX_LLM_SPOTS) {
+      return { code: 0, list: exist.slice(0, 6).map(shape), added: 0, cached: true };
+    }
+
+    const scope = parent ? parent + name : name;
+    const prompt = '你是旅行顾问。请推荐 ' + scope + '（行政区划代码 ' + adcode + '）最有代表性的 5 个景点或体验，'
+      + '每个包含字段：name（名称，不超过15字）、desc（一句话亮点介绍，不超过60字，突出特色，不要套话）、'
+      + 'bestMonths（最适合游玩的月份，格式如 "4-6,9-10"，全年皆宜写 "四季皆宜"）、'
+      + 'tags（1-3个标签，从 自然/人文/美食/夜景观赏/亲子/徒步/海岛/古镇/冰雪/温泉 中选）。'
+      + '只输出 JSON 数组，不要任何其他文字。';
+
+    const content = await callLLM(prompt, key);
     const spots = validate(extractJson(content), adcode);
     if (!spots.length) return { code: 1, msg: '生成结果校验后为空' };
-    // 去重：集合里已有的名字不重复写
-    const exist = await db.collection('attractions')
-      .where({ adcode: String(adcode) }).limit(100).get();
+
     const have = {};
-    (exist.data || []).forEach((d) => { have[d.name] = 1; });
+    exist.forEach((d) => { have[d.name] = 1; });
     const fresh = spots.filter((s) => !have[s.name]);
-    if (fresh.length) {
-      await db.collection('attractions').add(fresh.map((s) => ({ data: s })));
-    }
-    // 返回全量视图：库里已有的 + 本次新生成的（客户端以此覆盖缓存）
-    const list = await db.collection('attractions')
-      .where({ adcode: String(adcode) }).limit(6).get();
-    return { code: 0, list: (list.data || []).map((d) => ({
-      name: d.name, desc: d.desc, img: d.img || '',
-      bestMonths: d.bestMonths || '', tags: d.tags || []
-    })) };
-  } catch (e) {
-    console.error('[genAttraction]', e.message);
-    return { code: 1, msg: e.message };
+    for (const s of fresh) await save(s);
+
+    const all = await listByAdcode(adcode);
+    return { code: 0, list: all.slice(0, 6).map(shape), added: fresh.length };
+  } catch (err) {
+    console.error('[genAttraction]', err.message);
+    return { code: 1, msg: err.message };
   }
 };

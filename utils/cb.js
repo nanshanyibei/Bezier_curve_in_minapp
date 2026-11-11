@@ -342,20 +342,88 @@ function fetchAttractions(adcode, fallbackCode, limit) {
   });
 }
 
+/** 与服务端 genAttraction 保持同一套提示词（云函数独立打包，无法共用文件，改动需两边同步） */
+function buildGenPrompt(adcode, scope) {
+  return '你是旅行顾问。请推荐 ' + scope + '（行政区划代码 ' + adcode + '）最有代表性的 5 个景点或体验，'
+    + '每个包含字段：name（名称，不超过15字）、desc（一句话亮点介绍，不超过60字，突出特色，不要套话）、'
+    + 'bestMonths（最适合游玩的月份，格式如 "4-6,9-10"，全年皆宜写 "四季皆宜"）、'
+    + 'tags（1-3个标签，从 自然/人文/美食/夜景观赏/亲子/徒步/海岛/古镇/冰雪/温泉 中选）。'
+    + '只输出 JSON 数组，不要任何其他文字。';
+}
+
+/** 本地已配置的 LLM key（「AI 助手」页填过才有） */
+function readLocalLlmKey() {
+  try {
+    const ai = require('./ai');
+    return ai.hasApiKey() ? ai.getApiKey() : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+/**
+ * 本地兜底生成：云函数没配 SILICONFLOW_KEY 或网关失败时，
+ * 用用户在「AI 助手」页填过的 key 直连 LLM（开发期路径）。
+ */
+function localGen(adcode, scope) {
+  let ai;
+  try { ai = require('./ai'); } catch (e) { return Promise.resolve([]); }
+  if (!ai.hasApiKey()) return Promise.resolve([]);
+  return ai.chatCompletion({
+    messages: [{ role: 'user', content: buildGenPrompt(adcode, scope) }],
+    temperature: 0.8,
+    maxTokens: 1200
+  }).then((text) => {
+    const s = String(text || '');
+    const a = s.indexOf('[');
+    const b = s.lastIndexOf(']');
+    if (a < 0 || b <= a) return [];
+    const arr = JSON.parse(s.slice(a, b + 1));
+    const list = (Array.isArray(arr) ? arr : []).filter((it) => (
+      it && typeof it.name === 'string' && it.name.trim()
+      && typeof it.desc === 'string' && it.desc.trim()
+    )).slice(0, 5).map((it) => ({
+      name: it.name.trim().slice(0, 30),
+      desc: it.desc.trim().slice(0, 200),
+      img: '',
+      bestMonths: typeof it.bestMonths === 'string' ? it.bestMonths.slice(0, 30) : '',
+      tags: Array.isArray(it.tags) ? it.tags.slice(0, 4).map((t) => String(t).slice(0, 10)) : []
+    }));
+    if (list.length) writeCache(adcode, list);
+    return list;
+  }).catch((err) => {
+    console.error('[cb] 本地 AI 生成失败:', (err && err.message) || err);
+    return [];
+  });
+}
+
 /** 调云函数按需生成景点（LLM 在服务端，key 不落客户端）
  *  走网关而非 SDK callFunction：匿名身份调 /v1/functions 会被 EXCEED_AUTHORITY 拒。
- *  需先给 genAttraction 建同域路由（如 /genAttraction）才生效。 */
+ *  带 token 供服务端鉴权；本地有 key 时一并透传（服务端配了环境变量会忽略）。
+ *  服务端未配 key（code 2）或网关不可用时，退回本地直连。 */
 function genAttractions(adcode, regionName, parentName) {
-  return ready().then((app) => {
-    if (!gwReady()) return Promise.resolve([]);
-    return gwRequest('genAttraction', {
-      adcode: adcode, name: regionName, parent: parentName || ''
-    }).then((r) => {
+  const scope = parentName ? parentName + regionName : regionName;
+  return ready().then(() => {
+    if (!gwReady()) return localGen(adcode, scope);
+    const payload = {
+      adcode: adcode,
+      name: regionName,
+      parent: parentName || '',
+      token: _token
+    };
+    const localKey = readLocalLlmKey();
+    if (localKey) payload.llmKey = localKey;
+    return gwRequest('genAttraction', payload).then((r) => {
       if (r && r.code === 0 && Array.isArray(r.list) && r.list.length) {
         writeCache(adcode, r.list);
         return r.list;
       }
-      return [];
+      if (r && r.code === 401) {
+        console.warn('[cb] 景点生成鉴权失败，改用本地 key');
+        return localGen(adcode, scope);
+      }
+      if (r && r.code === 2) console.warn('[cb] 云函数未配置 SILICONFLOW_KEY，改用本地 key');
+      return localGen(adcode, scope);
     });
   });
 }
@@ -364,6 +432,7 @@ module.exports = {
   ready,
   sdkAvailable,
   envConfigured,
+  cloudReady: gwReady,
   getUserKey,
   getLoginInfo,
   getOpenid,

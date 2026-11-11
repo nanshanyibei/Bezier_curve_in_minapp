@@ -27,15 +27,35 @@ App({
   },
   globalData: {
     userInfo: null,
-    shareTicket: null
+    shareTicket: null,
+    syncPromise: null // 登录 + 数据双向同步的 Promise，页面可等待后再渲染
   },
 })
 
-// 登录预热 + 首次本地数据上云
-cb.ready().then(function () {
-  if (!cb.getLoginInfo().logged) return; // 未登录不推送，避免产生无法归属的孤儿数据
-  migrateLocalToCloud();
-}).catch(function () { /* 失败已内部降级，业务层走本地 */ });
+// 登录预热 → 本地数据上云 → 云端数据回灌本地
+// 顺序不能颠倒：先 push 保证本机新数据不丢，再 pull 用 updatedAt 新者胜合并
+var syncPromise = cb.ready()
+  .then(function () {
+    if (!cb.getLoginInfo().logged) return null; // 未登录不推不拉，避免产生无法归属的孤儿数据
+    return migrateLocalToCloud().then(syncFromCloud);
+  })
+  .catch(function () { return null; /* 失败已内部降级，业务层走本地 */ });
+
+(function attach(tries) {
+  var app = getApp();
+  if (app && app.globalData) { app.globalData.syncPromise = syncPromise; return; }
+  if ((tries || 0) < 20) setTimeout(function () { attach((tries || 0) + 1); }, 50);
+})(0);
+
+/**
+ * 云端 → 本地回灌
+ * 清缓存 / 换手机后本地为空，靠这一步把数据取回来；各页面 onLoad 也会各自拉一次兜底
+ */
+function syncFromCloud() {
+  var travelStore = require('./utils/travelStore');
+  var diaryStore = require('./utils/diaryStore');
+  return Promise.all([travelStore.pullCloud(), diaryStore.pullCloud()]);
+}
 
 /**
  * 一次性迁移：把本机已有的标记/日记推到云端（老用户升级后数据不丢）
@@ -43,7 +63,7 @@ cb.ready().then(function () {
  */
 function migrateLocalToCloud() {
   var FLAG = 'sync.pushed.v1';
-  if (wx.getStorageSync(FLAG)) return;
+  if (wx.getStorageSync(FLAG)) return Promise.resolve();
   var travelStore = require('./utils/travelStore');
   var diaryStore = require('./utils/diaryStore');
 
@@ -52,7 +72,7 @@ function migrateLocalToCloud() {
   var entries = (diaryStore.list() || []).filter(function (e) { return e && e.text; });
   if (!keys.length && !entries.length) {
     wx.setStorageSync(FLAG, 1);
-    return;
+    return Promise.resolve();
   }
 
   var jobs = [];
@@ -75,7 +95,7 @@ function migrateLocalToCloud() {
     }));
   });
 
-  Promise.all(jobs).then(function (rs) {
+  return Promise.all(jobs).then(function (rs) {
     var allOk = rs.every(function (x) { return x !== false; });
     if (allOk) {
       wx.setStorageSync(FLAG, 1);

@@ -302,11 +302,11 @@ Page({
     });
   },
 
-  /** 「AI 补充更多」：云函数 LLM 生成并写库，成功后刷新弹层 */
+  /** 「AI 补充更多」：云函数 LLM 生成并写库，成功后刷新弹层（服务端无 key 时自动退回本地直连） */
   onGenAttractions() {
     const region = this._sheetRegion;
     if (!region || !this.data.sheet || this.data.sheet.spotsLoading) return;
-    if (!cb.sdkAvailable() || !cb.envConfigured()) {
+    if (!cb.cloudReady()) {
       wx.showToast({ title: '未配置云端，无法 AI 补充', icon: 'none' });
       return;
     }

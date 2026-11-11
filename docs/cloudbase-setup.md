@@ -83,12 +83,28 @@ AclTag 四档对照（**注意 `READONLY` 不是「只读」，是仅创建者�
 
 ## 三、导入种子数据
 
+**已完成（2026-11-11）**：34 条省级代表景点已写入 `attractions`，34 个 adcode 全覆盖，匿名可读、按 adcode 查询已验证。
+
+如需重跑：
+
 ```
-node scripts/export-attractions.js
+node scripts/export-attractions.js   # 生成 scripts/attractions-import.jsonl
 ```
 
-生成 `scripts/attractions-import.jsonl`（34 条省级代表景点）→
-控制台「数据库 → 文档型数据库（Document 编辑器）→ attractions → 导入」选择该文件，冲突处理选"插入"。pgdoc 模式下导入的集合固定落在 `pgdoc_data` schema，编辑器里不需要指定 schema；单批上限 1000 条。
+两条导入路径：
+
+1. **API 批量写（推荐，不用点控制台）**——用 service_role 的 api_key 打文档接口，每批 10 条：
+   ```
+   POST /v1/database/instances/(default)/databases/(default)/collections/attractions/documents
+   Authorization: Bearer <api_key>
+   { "data": [ {...}, ... ] }
+   ```
+   `manageAppAuth(createApiKey, keyType='api_key')` 生成临时 key，用完 `deleteApiKey` 删掉。
+2. 控制台「数据库 → 文档型数据库（Document 编辑器）→ attractions → 导入」，冲突处理选"插入"。
+
+pgdoc 模式下集合固定落在 `pgdoc_data` schema，编辑器里不需要指定 schema；单批上限 1000 条。
+
+⚠️ 注意：`attractions` 的 AclTag 是 `ADMINWRITE`，**匿名/普通用户写会 403**，只能管理端或 service_role 写。
 
 ## 四、部署云函数
 
@@ -131,17 +147,47 @@ https://eligible-gorilla-d4e0n4kdadfbdc4-1311813133.ap-shanghai.app.tcloudbase.c
 tcb fn deploy wxauth --dir cloudfunctions/wxauth --env <envId>
 ```
 
-### 4.2 `genAttraction`（AI 补充景点，可选）
+### 4.2 `genAttraction`（AI 补充景点）
 
-1. 配置环境变量：「云函数 → genAttraction（部署后）→ 配置」：
-   - `SILICONFLOW_KEY`：你的硅基流动 API Key（必填）
-   - `SILICONFLOW_MODEL`：可选，默认 `deepseek-ai/DeepSeek-V3-0324`
-2. 部署方式：控制台「云函数 → 新建」→ 选"本地上传"（zip 打包 `cloudfunctions/genAttraction/`），或用 CloudBase CLI：
-   ```
-   npm i -g @cloudbase/cli
-   tcb fn deploy genAttraction --dir cloudfunctions/genAttraction --env <envId>
-   ```
-   部署前先在目录里 `npm install`（node-sdk 依赖）。
+已部署（2026-11-11），函数名 `genAttraction`，Nodejs18.15，入口 `index.main`，超时 60s。同域路由 `/genAttraction`（`SCF` 上游、`auth=false`）：
+
+```
+https://eligible-gorilla-d4e0n4kdadfbdc4-1311813133.ap-shanghai.app.tcloudbase.com/genAttraction
+```
+
+环境变量：
+
+| Key | 值 | 说明 |
+|---|---|---|
+| `WX_APPID` | `wx19971a62016469bf` | 与 wxauth 同值 |
+| `WX_SECRET` | 小程序 AppSecret | 配置后**强制校验 token**，防止公网裸调烧 LLM 额度 |
+| `SILICONFLOW_KEY` | 硅基流动 Key | 可空；空时客户端透传自己本地配置的 key（开发期过渡） |
+| `SILICONFLOW_MODEL` | 可选 | 默认 `deepseek-ai/DeepSeek-V3-0324` |
+
+行为：
+
+1. 配了 `WX_APPID`+`WX_SECRET` 就用与 wxauth 相同的 HMAC 算法校验 `token`，失败返回 `{code:401}`
+2. 该 adcode 已有 ≥12 条 `source:'llm'` 数据时直接返回，不再调模型（省额度、防重复触发）
+3. 生成结果按 `llm_{adcode}_{name hash}` 作 `_id` 落库，重跑不重复写
+4. 返回该 adcode 全量视图（最多 6 条），客户端据此覆盖 7 天缓存
+
+实测分支：无 token → `401`；假 key → `LLM HTTP 401: {"code":30014,"message":"Token is invalid."}`（链路通）。
+
+客户端兜底（`utils/cb.js` 的 `genAttractions`）：
+
+```
+云函数返回 code 0 → 用结果
+返回 401 / code 2(NO_LLM_KEY) / 网关失败 → 本地 localGen()，用「AI 助手」页配置的 key 直连
+```
+
+即**服务端配了 key 就是纯服务端代理**（key 不落客户端），没配也能用，只是 key 临时经请求体透传——正式发布前应配好 `SILICONFLOW_KEY` 并删掉客户端的本地直连分支。
+
+部署（改了代码后）：
+
+```
+manageFunctions(updateFunctionCode, functionName='genAttraction',
+                functionRootPath='<项目>/cloudfunctions')
+```
 
 ## 五、微信开发者工具
 
@@ -157,10 +203,13 @@ tcb fn deploy wxauth --dir cloudfunctions/wxauth --env <envId>
 
 ## 六、验证清单
 
-- [ ] 点省份弹层出现「当地推荐」区，有种子数据（如甘肃→莫高窟）
-- [ ] 点「AI 补充」返回 5 条景点，再点弹层命中缓存（同一 adcode 不再调 LLM）
-- [ ] 标记「去过」→ 云端 `marks` 集合出现 `{openid}_{adcode}` 文档（`owner` 为 openid）
-- [ ] 清开发者工具缓存（模拟另一台设备）→ 重新打开，标记被云端合并回来
+- [x] `attractions` 34 条种子数据可匿名读、按 adcode 查询命中（已验证）
+- [x] `[cb] 就绪: {logged:true, mode:"cloud_gateway", uid:"o..."}`（真机已验证）
+- [x] 标记「去过」→ 云端 `marks` 出现 `{openid}_{adcode}` 文档（已验证，青海省）
+- [x] 清缓存重编译 → 打开即恢复（本地 harness 验证回灌逻辑）
+- [ ] 点省份弹层出现「当地推荐」区，有云端种子数据（如甘肃→敦煌莫高窟）
+- [ ] 点「AI 补充」返回 5 条景点，再点命中缓存（同一 adcode 不再调 LLM）
+- [ ] 配好 `SILICONFLOW_KEY` 后，客户端即使清空本地 key 也能生成（验证纯服务端代理）
 
 ## 费用预估
 
