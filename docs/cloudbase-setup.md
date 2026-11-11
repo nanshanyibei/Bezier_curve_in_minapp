@@ -8,25 +8,42 @@
 2. **填 envId**：改本项目 `config.js` 里 `CLOUDBASE_ENV: 'YOUR_ENV_ID'` 为你的 envId
 3. **开启匿名登录**：控制台「身份认证」→ 登录方式 → 开启「匿名登录」
 
-## 二、建集合 + 安全规则
+## 二、集合 + 权限（本环境已启用 pgdoc）
 
-「数据库」→ 创建两个集合，规则都在「集合 → 权限设置」里选"自定义安全规则"粘贴：
+**现状（2026-11-11 已办）**：环境 `eligible-gorilla-d4e0n4kdadfbdc4` 是 PG 模式，已通过 `EnablePGDocumentExt` 开通 **pgdoc 插件**（`PostgreSQL[].DocumentExt = true`），文档型数据库 HTTP API 已由 PostgreSQL 承载，数据落在 `pgdoc_data` schema。`marks`、`attractions` 两个集合已创建，集合名和客户端 SDK 调用方式都不变。
 
-**`marks`（用户标记）**
-```json
-{
-  "read": "auth != null",
-  "write": "auth != null"
-}
+⚠️ **pgdoc 只支持四档基础权限，不支持自定义安全规则**，原 `{"read": "auth != null", ...}` 那套在这里不生效。
+
+**权限已配好（2026-11-11）**，不用再动控制台：
+
+| 集合 | AclTag | 控制台叫法 | 实测 |
+|---|---|---|---|
+| `marks` | `PRIVATE` | 仅创建者可读写 | 跨设备读不到对方标记 ✅ |
+| `attractions` | `ADMINWRITE` | 读取全部数据，不可修改数据 | 任意匿名用户可读；写入 403 `admin only` ✅ |
+
+改法（管理端 API，不需要控制台点鼠标）：
+
+```
+callCloudApi  service=tcb  action=ModifyDatabaseACL  version=2018-06-08
+{ "EnvId": "<envId>", "CollectionName": "attractions", "AclTag": "ADMINWRITE" }
 ```
 
-**`attractions`（景点，所有登录用户可读，客户端不可写——只有云函数写）**
-```json
-{
-  "read": "auth != null",
-  "write": false
-}
-```
+查当前档位用 `DescribeDatabaseACL`（同参数，返回 `{AclTag, Rule}`）。
+
+AclTag 四档对照（**注意 `READONLY` 不是「只读」，是仅创建者可写**，设错了写接口照样 201）：
+
+| AclTag | 语义 |
+|---|---|
+| `PRIVATE` | 仅创建者可读写 |
+| `READONLY` | 所有用户可读，**仅创建者可写** |
+| `ADMINWRITE` | 所有用户可读，仅管理端可写（客户端只读档） |
+| `ADMINONLY` | 仅管理端可读写 |
+
+`managePermissions(updateResourcePermission)` 在 PG 环境被平台直接拒（`ModifyResourcePermission does not support PostgreSQL type environments`），PG 里也没有 ACL 表 —— 只能用 `ModifyDatabaseACL`（或控制台）。
+
+⚠️ 已知 quirk：`GET /documents?count=true` 返回的 `total` 在批量 `documents/remove` 之后不会立刻归零（实测删完仍报 `total:2`，但按 `_id` 查已 404、list 为空）。**别依赖 `count=true` 判断条数**，用 `list.length` 或控制台看。
+
+其他已验证事实：匿名登录下 `_openid` 会被自动注入（实测文档里带 `_openid`），所以按 `_openid` 判归属的基础权限可用；`utils/cb.js` 里的 `userKey`（设备维度）仍可作为业务层隔离，但服务端归属判定认的是 `_openid`。
 
 ## 三、导入种子数据
 
@@ -35,7 +52,7 @@ node scripts/export-attractions.js
 ```
 
 生成 `scripts/attractions-import.jsonl`（34 条省级代表景点）→
-控制台「数据库 → attractions → 导入」选择该文件，冲突处理选"插入"。
+控制台「数据库 → 文档型数据库（Document 编辑器）→ attractions → 导入」选择该文件，冲突处理选"插入"。pgdoc 模式下导入的集合固定落在 `pgdoc_data` schema，编辑器里不需要指定 schema；单批上限 1000 条。
 
 ## 四、部署云函数 genAttraction
 
