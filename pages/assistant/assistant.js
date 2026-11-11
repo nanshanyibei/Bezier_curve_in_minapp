@@ -1,8 +1,10 @@
 const { streamChat } = require('../../utils/sse');
 const ai = require('../../utils/ai');
+const cb = require('../../utils/cb');
 const config = require('../../config');
 
 const HISTORY_KEY = 'chat.messages';
+const HISTORY_TS_KEY = 'chat.updatedAt';
 const MAX_CONTEXT_MESSAGES = 40; // 最近 20 轮
 const PUMP_TICK = 60; // 打字机 tick（ms），setData 跨线程不宜太快
 
@@ -46,6 +48,22 @@ Page({
     this.setData({ hasKey: ai.hasApiKey() });
     const cached = wx.getStorageSync(HISTORY_KEY);
     if (Array.isArray(cached)) this.setData({ messages: cached });
+    this.pullCloudHistory();
+  },
+
+  /** 拉云端对话记录（chats 集合仅一条，按 updatedAt 新者胜） */
+  pullCloudHistory() {
+    cb.listDocs('chats').then((list) => {
+      if (!list || !list.length) return;
+      const doc = list[0];
+      if (!doc || !Array.isArray(doc.messages) || !doc.messages.length) return;
+      const localT = Number(wx.getStorageSync(HISTORY_TS_KEY) || 0);
+      if ((doc.updatedAt || 0) <= localT) return;
+      this.setData({ messages: doc.messages });
+      wx.setStorageSync(HISTORY_KEY, doc.messages);
+      wx.setStorageSync(HISTORY_TS_KEY, doc.updatedAt || 0);
+      this.scrollToEnd();
+    }).catch(() => { /* 云端不可用则用本地 */ });
   },
 
   onShow() {
@@ -242,6 +260,10 @@ Page({
         elapsedText: m.elapsedText || '-'
       }));
     wx.setStorageSync(HISTORY_KEY, slim);
+    const ts = Date.now();
+    wx.setStorageSync(HISTORY_TS_KEY, ts);
+    // 异步推云端（失败静默，下次进入拉取时兜底）
+    cb.setDoc('chats', 'history', { messages: slim, updatedAt: ts });
   },
 
   onClear() {
@@ -252,6 +274,8 @@ Page({
       success: (res) => {
         if (res.confirm) {
           wx.removeStorageSync(HISTORY_KEY);
+          wx.removeStorageSync(HISTORY_TS_KEY);
+          cb.removeDoc('chats', 'history');
           this.setData({ messages: [], busy: false });
           this.fullBuf = '';
           this.shownLen = 0;

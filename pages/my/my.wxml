@@ -2,7 +2,16 @@
 
   <view class="hero">
     <view class="hero-title">南山工作台</view>
-    <view class="text-dim hero-sub">日记 · 旅行 · 本地存储</view>
+    <view class="text-dim hero-sub">日记 · 旅行 · 云端同步</view>
+  </view>
+
+  <!-- 同步状态 -->
+  <view class="card row">
+    <view class="row-main">
+      <view class="row-title">数据同步</view>
+      <view class="text-dim">{{syncText}}</view>
+    </view>
+    <text class="row-arrow" wx:if="{{syncOk}}">✓</text>
   </view>
 
   <!-- 数据概览 -->
@@ -55,5 +64,5 @@
     <text class="row-arrow">›</text>
   </view>
 
-  <view class="footer text-dim">v{{version}} · 所有数据仅保存在本机</view>
+  <view class="footer text-dim">v{{version}} · 数据已同步云端</view>
 </view>

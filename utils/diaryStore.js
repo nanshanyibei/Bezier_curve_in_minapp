@@ -1,7 +1,10 @@
 /**
- * 日记本地存储（wx.setStorageSync）
- * 结构：{ entries: [{ date: 'YYYY-MM-DD', text: '...', updatedAt: ts }] }
+ * 日记存储
+ * - 本地 storage（key: diary.entries）作离线缓存：{ entries: [{ date, text, updatedAt }] }
+ * - 云端 diaries 集合（经云函数 wxauth 网关，按 openid 隔离），_id = date
+ * - 写：本地即时生效 → 异步推云端；读：本地优先，pullCloud() 按 updatedAt 新者胜合并
  */
+const cb = require('./cb');
 
 const KEY = 'diary.entries';
 
@@ -30,13 +33,12 @@ function list() {
   });
 }
 
-/** 保存（按日期 upsert） */
+/** 保存（按日期 upsert）；空内容 = 删除 */
 function save(date, text) {
   const entries = loadAll();
   const trimmed = (text || '').trim();
   const idx = entries.findIndex(function (e) { return e.date === date; });
   if (!trimmed) {
-    // 空内容 = 删除
     if (idx >= 0) entries.splice(idx, 1);
   } else if (idx >= 0) {
     entries[idx].text = trimmed;
@@ -45,6 +47,18 @@ function save(date, text) {
     entries.push({ date: date, text: trimmed, updatedAt: Date.now() });
   }
   saveAll(entries);
+
+  // 异步推云端（失败静默，下次 pullCloud 兜底）
+  if (!trimmed) {
+    cb.removeDoc('diaries', date);
+  } else {
+    const cur = entries.find(function (e) { return e.date === date; });
+    cb.setDoc('diaries', date, {
+      date: date,
+      text: trimmed,
+      updatedAt: (cur && cur.updatedAt) || Date.now()
+    });
+  }
 }
 
 function get(date) {
@@ -73,4 +87,35 @@ function stats() {
   return { count: entries.length, chars: chars };
 }
 
-module.exports = { KEY, today, list, save, get, getRange, stats };
+/**
+ * 拉云端日记并按 updatedAt 新者胜合并，返回 { entries, changed }
+ * 云端不可用时 changed = false
+ */
+function pullCloud() {
+  return cb.listDocs('diaries').then(function (list) {
+    if (!list || !list.length) return { entries: loadAll(), changed: false };
+    const map = {};
+    loadAll().forEach(function (e) { if (e && e.date) map[e.date] = e; });
+    let changed = false;
+    list.forEach(function (d) {
+      if (!d || !d.date) return;
+      const remote = { date: d.date, text: d.text || '', updatedAt: d.updatedAt || 0 };
+      const cur = map[remote.date];
+      if (cur && (cur.updatedAt || 0) >= remote.updatedAt) return;
+      if (!remote.text) {
+        if (cur) { delete map[remote.date]; changed = true; }
+        return;
+      }
+      map[remote.date] = remote;
+      changed = true;
+    });
+    if (changed) {
+      saveAll(Object.keys(map).map(function (k) { return map[k]; }));
+    }
+    return { entries: loadAll(), changed: changed };
+  }).catch(function () {
+    return { entries: loadAll(), changed: false };
+  });
+}
+
+module.exports = { KEY, today, list, save, get, getRange, stats, pullCloud };

@@ -24,6 +24,24 @@ Page({
       entries: diaryStore.list(),
       stats: diaryStore.stats()
     });
+    this.pullCloud();
+  },
+
+  /** 拉云端日记并合并（换手机/重装后靠这一步认回） */
+  pullCloud() {
+    diaryStore.pullCloud().then((r) => {
+      if (!r || !r.changed) return;
+      const patch = {
+        entries: diaryStore.list(),
+        stats: diaryStore.stats()
+      };
+      // 当前编辑框为空时用云端内容补上，避免覆盖正在输入的文字
+      if (!this.data.content) {
+        const cur = diaryStore.get(this.data.selectedDate);
+        if (cur) patch.content = cur;
+      }
+      this.setData(patch);
+    }).catch(() => { /* 云端不可用时用本地 */ });
   },
 
   onDateChange(e) {
