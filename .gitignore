@@ -2,3 +2,5 @@ node_modules/
 dist/
 .tmpff/
 .DS_Store
+miniprogram_npm
+release
