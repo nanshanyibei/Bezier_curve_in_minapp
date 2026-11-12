@@ -28,6 +28,7 @@ App({
   globalData: {
     userInfo: null,
     shareTicket: null,
+    travelFocus: '', // 足迹清单页 → 地图页的一次性定位请求（adcode）
     syncPromise: null // 登录 + 数据双向同步的 Promise，页面可等待后再渲染
   },
 })

@@ -1,0 +1,177 @@
+.list-page {
+  padding: 24rpx 24rpx calc(48rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+/* ---------- 完成度 ---------- */
+.cov-card {
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
+  border-radius: 20rpx;
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.cov-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.cov-title {
+  font-size: 28rpx;
+  color: var(--text-dim);
+}
+
+.cov-num {
+  font-size: 52rpx;
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1;
+}
+
+.cov-total {
+  font-size: 26rpx;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+
+.cov-track {
+  height: 12rpx;
+  border-radius: 999rpx;
+  background: var(--bg-card-2);
+  overflow: hidden;
+}
+
+.cov-fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, var(--green), var(--accent));
+  transition: width 0.35s ease;
+}
+
+.cov-meta {
+  margin-top: 16rpx;
+}
+
+/* ---------- 筛选 ---------- */
+.filters {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.fchip {
+  flex: 1;
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--text-dim);
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
+  border-radius: 999rpx;
+  padding: 14rpx 0;
+}
+
+.fchip.on {
+  color: var(--accent);
+  border-color: rgba(110, 168, 254, 0.5);
+  background: rgba(110, 168, 254, 0.12);
+}
+
+/* ---------- 分组 ---------- */
+.group {
+  margin-bottom: 28rpx;
+}
+
+.group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 8rpx 12rpx;
+}
+
+.group-name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.group-meta {
+  font-size: 22rpx;
+}
+
+.grow {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
+  border-radius: 14rpx;
+  padding: 22rpx 24rpx;
+  margin-bottom: 12rpx;
+}
+
+.grow-hover {
+  background: var(--bg-card-2);
+}
+
+.gdot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #26262e;
+  border: 1rpx solid #4a5464;
+}
+
+.gdot.visited {
+  background: rgba(126, 212, 145, 0.5);
+  border-color: var(--green);
+}
+
+.gdot.want {
+  background: rgba(240, 179, 94, 0.5);
+  border-color: var(--orange);
+}
+
+.grow-name {
+  flex: 1;
+  font-size: 28rpx;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grow-tag {
+  font-size: 22rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+}
+
+.grow-tag.visited {
+  color: var(--green);
+  background: rgba(126, 212, 145, 0.15);
+}
+
+.grow-tag.want {
+  color: var(--orange);
+  background: rgba(240, 179, 94, 0.15);
+}
+
+.grow-arrow {
+  color: var(--text-dim);
+  font-size: 28rpx;
+}
+
+/* ---------- 空态与说明 ---------- */
+.empty {
+  text-align: center;
+  padding: 80rpx 0;
+}
+
+.tip {
+  text-align: center;
+  margin-top: 16rpx;
+  font-size: 22rpx;
+}

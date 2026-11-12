@@ -56,6 +56,7 @@ function drawScene(ctx, s) {
   const W = s.W;
   const H = s.H;
   const marks = s.marks || {};
+  const filter = s.filter || 'all';   // all | visited | want：不匹配的按未标记渲染
   const scale = view.scale;
   const tx = view.tx;
   const ty = view.ty;
@@ -72,7 +73,8 @@ function drawScene(ctx, s) {
   const regions = layer.regions;
   for (let i = 0; i < regions.length; i++) {
     const st = statusOf(marks[regions[i].adcode]);
-    groups[st === 'visited' ? 'visited' : st === 'want' ? 'want' : 'plain'].push(regions[i]);
+    const show = filter === 'all' || st === filter;
+    groups[show && st === 'visited' ? 'visited' : show && st === 'want' ? 'want' : 'plain'].push(regions[i]);
   }
 
   // 1. 分组填充（evenodd 挖洞）
@@ -169,6 +171,7 @@ function drawScene(ctx, s) {
       const m = marks[k];
       const st = statusOf(m);
       if (!st || !m || !m.center || /0000$/.test(k)) continue;
+      if (filter !== 'all' && st !== filter) continue;
       const pj = project(m.center[0], m.center[1]);
       const nx = (pj[0] - pr.minX) / pr.w;
       const ny = (pr.maxY - pj[1]) / pr.w;

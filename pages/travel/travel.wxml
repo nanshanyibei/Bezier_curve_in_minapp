@@ -10,22 +10,29 @@
   <view class="hud">
     <view wx:if="{{level === 'province'}}" class="chip back" bindtap="onBack">‹ 全国</view>
     <view class="chip title">{{currentName}}</view>
+    <view class="chip list" bindtap="onOpenList">清单</view>
   </view>
 
   <!-- 操作提示 -->
   <view class="hint" wx:if="{{level === 'country' && showHint}}">单击省份标记 · 弹层内可查看市界</view>
 
-  <!-- 图例 -->
+  <!-- 覆盖进度 -->
+  <view class="coverage">
+    <view class="cov-bar"><view class="cov-bar-fill" style="width:{{cov.pct}}%"></view></view>
+    <text class="cov-text">省级 {{cov.provinceVisited}}/{{cov.provinceTotal}} · {{cov.pct}}%</text>
+  </view>
+
+  <!-- 图例（可点，兼作筛选器） -->
   <view class="legend">
-    <view class="legend-item">
+    <view class="legend-item {{filter === 'all' ? 'on' : ''}}" data-f="all" bindtap="onFilter">
       <view class="swatch s-plain"></view>
-      <text>未去过</text>
+      <text>全部</text>
     </view>
-    <view class="legend-item">
+    <view class="legend-item {{filter === 'visited' ? 'on' : ''}}" data-f="visited" bindtap="onFilter">
       <view class="swatch s-visited"></view>
       <text>去过 {{stats.visited}}</text>
     </view>
-    <view class="legend-item">
+    <view class="legend-item {{filter === 'want' ? 'on' : ''}}" data-f="want" bindtap="onFilter">
       <view class="swatch s-want"></view>
       <text>想去 {{stats.want}}</text>
     </view>

@@ -32,6 +32,7 @@ const DROP_UTILS = ['ai.js', 'sse.js', 'insightPrompt.js', 'insightParse.js'];
 const PROD_PAGES = [
   'pages/diary/diary',
   'pages/travel/travel',
+  'pages/travel/list/list',
   'pages/my/my',
   'pages/my/privacy/privacy'
 ];

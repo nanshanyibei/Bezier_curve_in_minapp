@@ -43,18 +43,56 @@
   font-weight: 600;
 }
 
+.hud .list {
+  margin-left: auto;
+  color: var(--accent);
+}
+
 /* 操作提示 */
 .hint {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(110rpx + env(safe-area-inset-bottom));
+  bottom: calc(160rpx + env(safe-area-inset-bottom));
   font-size: 22rpx;
   color: var(--text-dim);
   background: rgba(0, 0, 0, 0.28);
   border-radius: 999rpx;
   padding: 8rpx 22rpx;
   pointer-events: none;
+}
+
+/* 覆盖进度 */
+.coverage {
+  position: absolute;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: calc(116rpx + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  pointer-events: none;
+}
+
+.cov-bar {
+  flex: 1;
+  height: 8rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.cov-bar-fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #7ed491, #6ea8fe);
+  transition: width 0.3s ease;
+}
+
+.cov-text {
+  font-size: 20rpx;
+  color: var(--text-dim);
+  flex-shrink: 0;
 }
 
 /* 图例 */
@@ -68,7 +106,7 @@
   border: 1rpx solid var(--border);
   border-radius: 16rpx;
   padding: 14rpx 24rpx;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .legend-item {
@@ -77,6 +115,14 @@
   gap: 10rpx;
   font-size: 22rpx;
   color: var(--text-dim);
+}
+
+.legend-item.on {
+  color: var(--text);
+}
+
+.legend-item.on .swatch {
+  box-shadow: 0 0 0 2rpx rgba(110, 168, 254, 0.7);
 }
 
 .swatch {

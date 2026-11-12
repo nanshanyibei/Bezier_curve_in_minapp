@@ -52,5 +52,6 @@ onDevOnly() {}
 
 - `pages/diary` 日记（本地存储）
 - `pages/travel` 旅行足迹地图（canvas + 行政区划边界）
+- `pages/travel/list` 足迹清单（省级分组、覆盖率、点条目回地图定位）
 - `pages/my` 我的（数据概览、隐私指引）
 - `pages/assistant`、`pages/insight` AI 能力，**仅 dev**

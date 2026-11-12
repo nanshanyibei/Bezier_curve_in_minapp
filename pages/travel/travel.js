@@ -15,6 +15,8 @@ Page({
     level: 'country',          // 'country' | 'province'
     currentName: '中国',
     stats: { visited: 0, want: 0 },
+    cov: { provinceVisited: 0, provinceTotal: 34, pct: 0, cityVisited: 0 },
+    filter: 'all',             // all | visited | want，图例即筛选器
     loading: false,
     progress: 0,
     loadingText: '',
@@ -43,12 +45,12 @@ Page({
   onLoad() {
     this._marks = travelStore.getAll();
     this._gs = geoGesture.createState();
-    this.setData({ stats: travelStore.stats() });
+    this.setData({ stats: travelStore.stats(), cov: travelStore.coverage() });
     // 云端标记合并（新者胜），异步不打断首屏
     travelStore.pullCloud().then((r) => {
       if (r && r.changed) {
         this._marks = r.marks;
-        this.setData({ stats: travelStore.stats() });
+        this.setData({ stats: travelStore.stats(), cov: travelStore.coverage() });
         this.draw();
       }
     });
@@ -61,6 +63,9 @@ Page({
   onShow() {
     // iOS 切走再切回时 canvas 位图可能被系统回收，立即重绘避免空白一帧
     if (this._renderer) this.draw();
+    // 从足迹清单返回时带定位请求
+    this.setData({ cov: travelStore.coverage() });
+    this.applyPendingFocus();
   },
 
   onHide() {
@@ -109,6 +114,11 @@ Page({
               this._view = geoMap.fitView(this._layer.bbox, width, height, 16);
               this._view._layerBBox = this._layer.bbox;
               this.draw();
+              if (this._pendingFocus) {
+                const f = this._pendingFocus;
+                this._pendingFocus = '';
+                this.focusAdcode(f);
+              }
             } catch (e) {
               this.setData({ error: '地图初始化失败：' + e.message });
             }
@@ -124,6 +134,65 @@ Page({
     this.initCanvas();
   },
 
+  // ---------- 筛选 / 清单入口 ----------
+  /** 图例即筛选器：all ↔ visited ↔ want（再次点击当前项退回 all） */
+  onFilter(e) {
+    const f = e.currentTarget.dataset.f || 'all';
+    this.setData({ filter: f === this.data.filter ? 'all' : f });
+    this.draw();
+  },
+
+  onOpenList() {
+    wx.navigateTo({ url: '/pages/travel/list/list' });
+  },
+
+  // ---------- 从清单页定位 ----------
+  findRegion(layer, adcode) {
+    if (!layer || !layer.regions) return null;
+    for (let i = 0; i < layer.regions.length; i++) {
+      if (layer.regions[i].adcode === adcode) return layer.regions[i];
+    }
+    return null;
+  },
+
+  applyPendingFocus() {
+    const app = getApp();
+    const g = app && app.globalData;
+    if (!g || !g.travelFocus) return;
+    const adcode = String(g.travelFocus);
+    g.travelFocus = '';
+    this.focusAdcode(adcode);
+  },
+
+  /** 省级标记直接弹层；市级先下钻到所属省，再在省级层里弹城市 */
+  focusAdcode(adcode) {
+    if (!this._countryLayer) {
+      this._pendingFocus = adcode; // 图层未就绪，initCanvas 完成后补
+      return;
+    }
+    const provCode = adcode.slice(0, 2) + '0000';
+    const provRegion = this.findRegion(this._countryLayer, provCode);
+    if (!provRegion) return;
+
+    const openCity = () => {
+      const hit = this.findRegion(this._layer, adcode);
+      if (hit) this.openSheet(hit);
+      else this.openSheet(provRegion);
+    };
+
+    if (adcode === provCode) {
+      if (this.data.level === 'province') this.onBack(() => this.openSheet(provRegion));
+      else this.openSheet(provRegion);
+      return;
+    }
+    if (this.data.level === 'province') {
+      if (this._provinceAdcode === provCode) { openCity(); return; }
+      this.onBack(() => this.drillTo(provRegion, openCity));
+      return;
+    }
+    this.drillTo(provRegion, openCity);
+  },
+
   // ---------- 绘制 ----------
   draw() {
     if (!this._renderer) return;
@@ -133,7 +202,8 @@ Page({
       W: this._W,
       H: this._H,
       marks: this._marks,
-      level: this.data.level
+      level: this.data.level,
+      filter: this.data.filter
     });
   },
 
@@ -172,7 +242,7 @@ Page({
   },
 
   // ---------- 下钻 / 返回 ----------
-  drillTo(region) {
+  drillTo(region, done) {
     if (this.data.loading) return;
     this.setData({ loading: true, progress: 0, loadingText: '正在加载' + region.name + '…', showHint: false });
     this._provinceAdcode = region.adcode;
@@ -189,6 +259,7 @@ Page({
           loading: false
         });
         this.draw();
+        if (typeof done === 'function') done();
       });
     }).catch((err) => {
       this.setData({ loading: false });
@@ -207,7 +278,7 @@ Page({
     });
   },
 
-  onBack() {
+  onBack(done) {
     if (!this._countryLayer || this.data.level !== 'province') return;
     const target = geoMap.fitView(this._countryLayer.bbox, this._W, this._H, 16);
     this.animateView(target, () => {
@@ -218,6 +289,7 @@ Page({
       this._provinceAdcode = '';
       this.setData({ level: 'country', currentName: '中国' });
       this.draw();
+      if (typeof done === 'function') done();
     });
   },
 
@@ -350,7 +422,7 @@ Page({
     const center = this.data.sheet.centerLL;
     this.closeSheet();
     this._marks = travelStore.set(adcode, status, { name: name, center: center });
-    this.setData({ stats: travelStore.stats() });
+    this.setData({ stats: travelStore.stats(), cov: travelStore.coverage() });
     this.draw();
   }
 });

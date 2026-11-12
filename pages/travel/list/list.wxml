@@ -1,0 +1,41 @@
+<view class="page list-page">
+
+  <!-- 完成度 -->
+  <view class="cov-card">
+    <view class="cov-head">
+      <text class="cov-title">省级足迹</text>
+      <view class="cov-num">{{cov.provinceVisited}}<text class="cov-total"> / {{cov.provinceTotal}}</text></view>
+    </view>
+    <view class="cov-track">
+      <view class="cov-fill" style="width:{{cov.pct}}%"></view>
+    </view>
+    <view class="cov-meta text-dim">覆盖 {{cov.pct}}% · 市/区 {{cov.cityVisited}} 个 · 想去 {{cov.want}} 个</view>
+  </view>
+
+  <!-- 筛选 -->
+  <view class="filters">
+    <view class="fchip {{filter === 'all' ? 'on' : ''}}" data-f="all" bindtap="onFilter">全部 {{counts.all}}</view>
+    <view class="fchip {{filter === 'visited' ? 'on' : ''}}" data-f="visited" bindtap="onFilter">去过 {{counts.visited}}</view>
+    <view class="fchip {{filter === 'want' ? 'on' : ''}}" data-f="want" bindtap="onFilter">想去 {{counts.want}}</view>
+  </view>
+
+  <!-- 分组列表 -->
+  <view class="group" wx:for="{{groups}}" wx:key="code">
+    <view class="group-head">
+      <text class="group-name">{{item.name}}</text>
+      <text class="group-meta text-dim">{{item.stat}}</text>
+    </view>
+    <view class="grow" wx:for="{{item.items}}" wx:for-item="row" wx:key="adcode"
+          data-adcode="{{row.adcode}}" bindtap="onTapItem" hover-class="grow-hover">
+      <view class="gdot {{row.status}}"></view>
+      <text class="grow-name">{{row.name}}</text>
+      <text class="grow-tag {{row.status}}">{{row.status === 'visited' ? '去过' : '想去'}}</text>
+      <text class="grow-arrow">›</text>
+    </view>
+  </view>
+
+  <view wx:if="{{empty}}" class="empty text-dim">还没有标记 · 回地图点一个省份开始</view>
+  <view wx:elif="{{!groups.length}}" class="empty text-dim">这个分类下还没有地方</view>
+
+  <view class="tip text-dim">点条目可以回到地图对应位置</view>
+</view>
