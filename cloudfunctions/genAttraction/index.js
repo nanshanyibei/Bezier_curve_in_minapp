@@ -22,7 +22,7 @@ const db = app.database();
 
 const COL = 'attractions';
 const LLM_BASE = 'https://api.siliconflow.cn/v1/chat/completions';
-const MODEL = process.env.SILICONFLOW_MODEL || 'deepseek-ai/DeepSeek-V3-0324';
+const MODEL = process.env.SILICONFLOW_MODEL || 'deepseek-ai/DeepSeek-V4-Flash';
 
 const APPID = process.env.WX_APPID;
 const SECRET = process.env.WX_SECRET;

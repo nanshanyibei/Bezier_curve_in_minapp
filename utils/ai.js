@@ -47,9 +47,11 @@ function chatCompletion(opts) {
       },
       success(res) {
         if (res.statusCode !== 200) {
-          const msg = (res.data && res.data.error && res.data.error.message) ||
-            ('HTTP ' + res.statusCode);
-          reject(new Error('AI 请求失败：' + msg));
+          // 硅基流动报错是 {code, message}，OpenAI 是 {error:{message}}，两种都取
+          const d = (typeof res.data === 'object' && res.data) || {};
+          const detail = (d.error && d.error.message) || d.message
+            || (d.code ? 'code=' + d.code : '');
+          reject(new Error('AI 请求失败：HTTP ' + res.statusCode + (detail ? ' ' + detail : '')));
           return;
         }
         const content = res.data &&

@@ -12,6 +12,8 @@
 
 **现状（2026-11-11 已办）**：环境 `eligible-gorilla-d4e0n4kdadfbdc4` 是 PG 模式，已通过 `EnablePGDocumentExt` 开通 **pgdoc 插件**（`PostgreSQL[].DocumentExt = true`），文档型数据库 HTTP API 已由 PostgreSQL 承载，数据落在 `pgdoc_data` schema。`marks`、`attractions` 两个集合已创建，集合名和客户端 SDK 调用方式都不变。
 
+✅ **历史遗留已清理（2026-11-12）**：pgdoc 定型前曾按「直建 PG 裸表」路线在 `public` schema 建过 `public.marks`、`public.attractions`（含 34 条种子 + RLS 策略），与 pgdoc 存储完全不相通。已 `DROP TABLE ... CASCADE` 删除，`public` schema 现在只剩 PostGIS 系统表。pgdoc 正式数据在 `pgdoc_data.documents_N`（N 对应 `pgdoc_catalog.collections` 里的 collection_id：marks=6、attractions=7、diaries=8、chats=9），不受影响；这些 documents 表只允许 pgdoc API 访问，直接 SQL count 会报 `permission denied`，属正常设计，勿当故障排查。
+
 ⚠️ **pgdoc 只支持四档基础权限，不支持自定义安全规则**，原 `{"read": "auth != null", ...}` 那套在这里不生效。
 
 **权限已配好（2026-11-11）**，不用再动控制台：
@@ -162,7 +164,7 @@ https://eligible-gorilla-d4e0n4kdadfbdc4-1311813133.ap-shanghai.app.tcloudbase.c
 | `WX_APPID` | `wx19971a62016469bf` | 与 wxauth 同值 |
 | `WX_SECRET` | 小程序 AppSecret | 配置后**强制校验 token**，防止公网裸调烧 LLM 额度 |
 | `SILICONFLOW_KEY` | 硅基流动 Key | 可空；空时客户端透传自己本地配置的 key（开发期过渡） |
-| `SILICONFLOW_MODEL` | 可选 | 默认 `deepseek-ai/DeepSeek-V3-0324` |
+| `SILICONFLOW_MODEL` | 可选 | 默认 `deepseek-ai/DeepSeek-V4-Flash`（2026-11-12 选型 ¥1.5/¥4.5；旧 `DeepSeek-V3-0324` 已下线） |
 
 行为：
 

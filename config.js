@@ -9,10 +9,11 @@ module.exports = {
   /* @dev:begin */
   // OpenAI 兼容 Base URL（硅基流动）
   LLM_BASE_URL: 'https://api.siliconflow.cn/v1',
-  // 对话主模型（流式）
-  CHAT_MODEL: 'deepseek-ai/DeepSeek-V3-0324',
+  // 对话主模型（流式）。选型 2026-11-12：DeepSeek-V4-Flash（¥1.5/¥4.5 每百万 token，1M 上下文）
+  // 备选：Qwen/Qwen3.5-35B-A3B（¥0.4/¥3.2 最便宜档）、DeepSeek-V3.2（¥4/¥6 质量优先）
+  CHAT_MODEL: 'deepseek-ai/DeepSeek-V4-Flash',
   // 日记分析模型（非流式，JSON 输出）
-  INSIGHT_MODEL: 'deepseek-ai/DeepSeek-V3-0324',
+  INSIGHT_MODEL: 'deepseek-ai/DeepSeek-V4-Flash',
   // 单次请求超时（微信上限 60s）
   TIMEOUT: 60000,
   /* @dev:end */
