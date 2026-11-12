@@ -29,6 +29,7 @@
           data-adcode="{{row.adcode}}" bindtap="onTapItem" hover-class="grow-hover">
       <view class="gdot {{row.status}}"></view>
       <text class="grow-name">{{row.name}}</text>
+      <text wx:if="{{row.memCount}}" class="grow-mem">{{row.memCount}} 条</text>
       <text class="grow-tag {{row.status}}">{{row.status === 'visited' ? '去过' : '想去'}}</text>
       <text class="grow-arrow">›</text>
     </view>

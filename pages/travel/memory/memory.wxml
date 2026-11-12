@@ -1,0 +1,63 @@
+<view class="page mem-page">
+
+  <!-- 城市头 -->
+  <view class="head">
+    <view class="head-left">
+      <text class="head-city">{{cityName}}</text>
+      <text class="tag {{plan ? 'tag-plan' : 'tag-visited'}}">{{plan ? '计划' : '去过'}}</text>
+    </view>
+    <text class="head-stat text-dim">{{stats.count}} 条回忆 · {{stats.photos}} 张照片</text>
+  </view>
+
+  <!-- 列表 -->
+  <view class="timeline" wx:if="{{items.length}}">
+    <view wx:for="{{items}}" wx:key="id" class="entry"
+          data-id="{{item.id}}" bindtap="onEdit" bindlongpress="onLongPress">
+
+      <!-- 日期徽标 -->
+      <view class="date-col">
+        <view class="date-badge">
+          <text class="date-day">{{item.day}}</text>
+          <text class="date-month">{{item.month}}月</text>
+        </view>
+        <view class="date-line" wx:if="{{index < items.length - 1}}"></view>
+      </view>
+
+      <!-- 内容 -->
+      <view class="entry-body">
+        <view class="entry-meta text-dim">
+          <text>{{item.year}}-{{item.month}}-{{item.day}}</text>
+          <text wx:if="{{item.weekday}}" class="dot">·</text>
+          <text wx:if="{{item.weekday}}">{{item.weekday}}</text>
+        </view>
+        <view wx:if="{{item.title}}" class="entry-title">{{item.title}}</view>
+        <view wx:if="{{item.text}}" class="entry-text">{{item.text}}</view>
+
+        <view wx:if="{{item.photos.length}}" class="grid {{item.gridClass}}">
+          <view wx:for="{{item.photos}}" wx:for-item="ph" wx:for-index="pi" wx:key="key"
+                class="cell" data-di="{{index}}" data-pi="{{pi}}" catchtap="onPreview">
+            <image wx:if="{{ph.display}}" class="cell-img" src="{{ph.display}}" mode="aspectFill" />
+            <view wx:else class="cell-img cell-ph">云端</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空态 -->
+  <view wx:if="{{!loading && !items.length}}" class="empty">
+    <view class="empty-icon">📷</view>
+    <view class="empty-title">还没有这里的回忆</view>
+    <view class="empty-desc text-dim">写下第一次来的那天，附几张照片</view>
+    <view class="empty-btn" bindtap="onAdd">写第一条</view>
+  </view>
+
+  <view class="bottom-space"></view>
+
+  <!-- 悬浮添加 -->
+  <view wx:if="{{items.length}}" class="fab" bindtap="onAdd">
+    <text class="fab-plus">+</text>
+    <text class="fab-text">添加</text>
+  </view>
+
+</view>

@@ -201,6 +201,18 @@
   font-size: 36rpx;
   font-weight: 700;
   margin-bottom: 8rpx;
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.plan-tag {
+  font-size: 20rpx;
+  font-weight: 500;
+  color: var(--orange);
+  background: rgba(240, 179, 94, 0.15);
+  border-radius: 999rpx;
+  padding: 4rpx 16rpx;
 }
 
 .sheet-sub {
@@ -252,6 +264,83 @@
 
 .sheet-drill-arrow {
   margin-left: 8rpx;
+}
+
+/* 我的回忆 */
+.mems {
+  margin-top: 28rpx;
+  background: var(--bg-card-2);
+  border: 1rpx solid var(--border);
+  border-radius: 18rpx;
+  padding: 22rpx 24rpx;
+}
+
+.mems-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.mems-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mems-count {
+  font-size: 22rpx;
+}
+
+.mems-body {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.mems-thumbs {
+  display: flex;
+  gap: 10rpx;
+  flex: 1;
+  min-width: 0;
+}
+
+.mems-thumb {
+  width: 108rpx;
+  height: 108rpx;
+  border-radius: 12rpx;
+  background: var(--bg-card);
+  flex-shrink: 0;
+}
+
+.mems-go {
+  font-size: 24rpx;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.mems-arrow {
+  margin-left: 4rpx;
+}
+
+.mems-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 28rpx 0;
+  border: 1rpx dashed var(--border);
+  border-radius: 14rpx;
+  color: var(--accent);
+}
+
+.mems-plus {
+  font-size: 34rpx;
+  line-height: 1;
+}
+
+.mems-empty-text {
+  font-size: 26rpx;
 }
 
 .sheet-hint {

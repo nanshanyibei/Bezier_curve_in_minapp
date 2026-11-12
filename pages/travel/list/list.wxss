@@ -149,6 +149,14 @@
   border-radius: 999rpx;
 }
 
+.grow-mem {
+  font-size: 20rpx;
+  color: var(--purple);
+  background: rgba(180, 142, 240, 0.14);
+  padding: 2rpx 10rpx;
+  border-radius: 999rpx;
+}
+
 .grow-tag.visited {
   color: var(--green);
   background: rgba(126, 212, 145, 0.15);

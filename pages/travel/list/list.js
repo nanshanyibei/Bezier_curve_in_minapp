@@ -3,6 +3,7 @@
  * 纯读 travelStore，不写任何数据；点条目回地图定位
  */
 const travelStore = require('../../../utils/travelStore');
+const memoryStore = require('../../../utils/memoryStore');
 
 Page({
   data: {
@@ -30,6 +31,7 @@ Page({
   build() {
     const filter = this.data.filter;
     const raw = travelStore.groupByProvince();
+    const memMap = memoryStore.countByCity();
     const counts = { all: 0, visited: 0, want: 0 };
 
     const groups = [];
@@ -39,8 +41,12 @@ Page({
         if (it.status === 'visited') counts.visited++;
         else if (it.status === 'want') counts.want++;
       });
-      const items = filter === 'all' ? g.items : g.items.filter((it) => it.status === filter);
-      if (!items.length) return;
+      const picked = filter === 'all' ? g.items : g.items.filter((it) => it.status === filter);
+      if (!picked.length) return;
+      // 带上该城市的回忆条数（只读，不参与筛选）
+      const items = picked.map((it) => Object.assign({}, it, {
+        memCount: (memMap[it.adcode] && memMap[it.adcode].count) || 0
+      }));
       const vc = items.filter((it) => it.status === 'visited').length;
       const wc = items.length - vc;
       let stat = '';

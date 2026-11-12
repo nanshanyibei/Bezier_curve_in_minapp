@@ -2,30 +2,32 @@
 
   <view class="card">
     <view class="card-title">我们收集什么</view>
-    <view class="para">本小程序不收集、不上传任何个人信息。日记内容、旅行标记仅保存在你手机的小程序本地缓存中。</view>
+    <view class="para">本小程序不收集任何身份信息用于其他用途。你在使用中产生的日记内容、旅行标记、回忆文字与照片，仅用于在本机与你的私有云端空间之间同步，开发者无法读取。</view>
   </view>
 
   <view class="card">
     <view class="card-title">数据存储位置</view>
-    <view class="para">所有数据通过微信小程序本地缓存（Storage）保存在本机，不经过任何服务器，开发者无法读取。</view>
+    <view class="para">数据优先保存在你手机的小程序本地缓存（Storage）中；开启云端同步后，文字内容与回忆照片会加密传输并保存在你的私有云存储空间内，与你的账号绑定，其他用户无法访问。</view>
   </view>
 
   <view class="card">
     <view class="card-title">网络请求说明</view>
-    <view class="para">旅行地图需要加载中国行政区划边界文件，该请求仅下载公开地理数据（来源 geojson.cn），不携带任何个人数据，也不上传你的标记记录。</view>
+    <view class="para">1. 旅行地图需加载中国行政区划边界文件（公开地理数据，来源 geojson.cn），不携带个人数据。</view>
+    <view class="para">2. 云端同步时，你的日记、旅行标记与回忆照片会通过加密通道上传至你的私有云空间，仅用于换设备后找回数据。</view>
+    <view class="para">3. 不含任何广告跟踪或第三方统计 SDK。</view>
   </view>
 
   <view class="card">
     <view class="card-title">你的控制权</view>
-    <view class="para">你可以随时在日记页删除单篇内容，或点击下方按钮一次性清除全部本地数据。卸载小程序同样会清除所有缓存。</view>
+    <view class="para">你可以随时删除单条日记或回忆（删除会同步清理云端数据），或在「我的」页一次性清除全部本地数据。卸载小程序同样会清除本机缓存。</view>
   </view>
 
   <view class="card">
     <view class="card-title">未成年人保护</view>
-    <view class="para">本工具不含社交与内容发布功能，日记内容仅本机可见。未成年人可在监护人指导下使用。</view>
+    <view class="para">本工具不含社交与内容发布功能，日记与回忆内容仅本人可见。未成年人可在监护人指导下使用。</view>
   </view>
 
   <button class="btn-danger clear-btn" bindtap="onClearAll">清除本机全部数据</button>
 
-  <view class="footer text-dim">更新日期：2026-11-09 · v{{version}}</view>
+  <view class="footer text-dim">更新日期：2026-11-12 · v{{version}}</view>
 </view>

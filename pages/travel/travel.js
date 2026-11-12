@@ -2,6 +2,7 @@ const geoMap = require('../../utils/geoMap');
 const geoRender = require('../../utils/geoRender');
 const geoGesture = require('../../utils/geoGesture');
 const travelStore = require('../../utils/travelStore');
+const memoryStore = require('../../utils/memoryStore');
 const cb = require('../../utils/cb');
 const seed = require('../../assets/data/attractions-seed');
 
@@ -342,10 +343,55 @@ Page({
         canDrill: isCountry,
         hint: hint,
         spots: [],
-        spotsLoading: true
+        spotsLoading: true,
+        memCount: 0,
+        memPhotos: 0,
+        memThumbs: []
       }
     });
     this.loadSpots(region, false);
+    this.loadMemories(region);
+  },
+
+  /** 弹层回忆摘要：条数 + 最近 3 张缩略图（优先本地图，换设备时异步换云端链接） */
+  loadMemories(region) {
+    const adcode = String(region.adcode);
+    const list = memoryStore.listByCity(adcode);
+    let photos = 0;
+    const thumbs = [];
+    const remote = [];
+    list.forEach((e) => {
+      (e.photos || []).forEach((p) => {
+        photos++;
+        if (p.local) thumbs.push(p.local);
+        else if (p.fileID) remote.push(p.fileID);
+      });
+    });
+    if (this._sheetRegion !== region) return;
+    this.setData({
+      'sheet.memCount': list.length,
+      'sheet.memPhotos': photos,
+      'sheet.memThumbs': thumbs.slice(0, 3)
+    });
+    // 本机没有图（换了设备）才去云端换链接，避免每次开弹层都多一次请求
+    if (!thumbs.length && remote.length) {
+      cb.getFileUrls(remote.slice(0, 3)).then((map) => {
+        if (this._sheetRegion !== region) return;
+        const urls = remote.slice(0, 3).map((f) => map[f]).filter(Boolean);
+        if (urls.length) this.setData({ 'sheet.memThumbs': urls });
+      });
+    }
+  },
+
+  /** 打开这座城市的回忆册 */
+  onOpenMemory() {
+    if (!this.data.sheet) return;
+    const s = this.data.sheet;
+    const plan = s.status === 'want' ? '&plan=1' : '';
+    wx.navigateTo({
+      url: '/pages/travel/memory/memory?adcode=' + s.adcode
+        + '&name=' + encodeURIComponent(s.name) + plan
+    });
   },
 
   /** 当前查询的省级兜底 adcode：全国层=region 本身（省）；省级层=adcode 截断到省 */

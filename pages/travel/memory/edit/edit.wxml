@@ -1,0 +1,68 @@
+<view class="page edit-page">
+
+  <scroll-view scroll-y class="body" enhanced show-scrollbar="{{false}}">
+
+    <!-- 城市 + 状态 -->
+    <view class="city-bar">
+      <text class="city-name">{{cityName}}</text>
+      <text class="tag {{plan ? 'tag-plan' : 'tag-visited'}}">{{plan ? '计划' : '去过'}}</text>
+    </view>
+
+    <!-- 日期 -->
+    <view class="field">
+      <text class="label">旅行日期</text>
+      <picker mode="date" value="{{date}}" end="{{today}}" bindchange="onDateChange">
+        <view class="picker-val">{{date}} <text class="picker-arrow">›</text></view>
+      </picker>
+    </view>
+
+    <!-- 标题 -->
+    <view class="field">
+      <input class="inp-title" value="{{title}}" maxlength="40" bindinput="onTitleInput"
+             placeholder="给这次旅行起个标题（可选）" placeholder-class="ph" />
+    </view>
+
+    <!-- 正文 -->
+    <view class="field field-text">
+      <textarea class="inp-text" value="{{text}}" maxlength="{{maxText}}" bindinput="onTextInput"
+                placeholder="那天发生了什么…" placeholder-class="ph"
+                auto-height show-confirm-bar="{{false}}" adjust-position="{{true}}" />
+      <view class="counter">{{textCount}}/{{maxText}}</view>
+    </view>
+
+    <!-- 照片九宫格 -->
+    <view class="field">
+      <view class="photos-head">
+        <text class="label">照片</text>
+        <text class="photos-count text-dim">{{photos.length}}/{{maxPhotos}}</text>
+      </view>
+      <view class="photos">
+        <view wx:for="{{photos}}" wx:key="key" class="ph">
+          <image wx:if="{{item.display}}" class="ph-img" src="{{item.display}}" mode="aspectFill"
+                 data-i="{{index}}" bindtap="onPreview" />
+          <view wx:else class="ph-img ph-empty">无图</view>
+
+          <view wx:if="{{item.uploading}}" class="ph-badge">上传中</view>
+          <view wx:elif="{{item.failed}}" class="ph-badge ph-badge-warn"
+                data-i="{{index}}" catchtap="onRetryPhoto">重试</view>
+
+          <view class="ph-del" data-i="{{index}}" catchtap="onRemovePhoto">×</view>
+        </view>
+
+        <view wx:if="{{photos.length < maxPhotos}}" class="ph ph-add" bindtap="onAddPhoto">
+          <text class="ph-add-plus">+</text>
+        </view>
+      </view>
+      <view class="photos-tip text-dim">图片会压缩后上传云端；上传失败也会保存在本机，可点「重试」</view>
+    </view>
+
+    <view class="bottom-space"></view>
+  </scroll-view>
+
+  <!-- 底部操作 -->
+  <view class="footer">
+    <view wx:if="{{isEdit}}" class="btn-del" bindtap="onDelete">删除</view>
+    <view class="btn-save {{saving ? 'disabled' : ''}}" bindtap="onSave">{{saving ? '保存中…' : '保存'}}</view>
+  </view>
+
+</view>

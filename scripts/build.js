@@ -33,6 +33,8 @@ const PROD_PAGES = [
   'pages/diary/diary',
   'pages/travel/travel',
   'pages/travel/list/list',
+  'pages/travel/memory/memory',
+  'pages/travel/memory/edit/edit',
   'pages/my/my',
   'pages/my/privacy/privacy'
 ];

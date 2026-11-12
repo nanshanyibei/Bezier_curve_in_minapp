@@ -22,6 +22,8 @@ const USER_KEY_STORAGE = 'travel.userKey'; // v1 设备维度身份，仅迁移/
 const OPENID_STORAGE = 'cb.openid';
 const TOKEN_STORAGE = 'cb.token';
 const MARKS_LIMIT = 100;
+// 与服务端 wxauth 的上限保持一致：base64 超过 2MB 由网关/云函数直接拒绝
+const UPLOAD_MAX_BASE64 = 2 * 1024 * 1024;
 const GATEWAY_BASE = config.CLOUD_GATEWAY_BASE || '';
 const GW = { gateway: true }; // SDK 不可用但网关可用时 ready() 的占位返回值（truthy）
 
@@ -70,7 +72,7 @@ function gwReady() {
  * 调 HTTP 网关上的云函数：POST {fnName}，body 即 event
  * 返回 Promise<result 对象|null>；网络失败 resolve null（业务层降级）
  */
-function gwRequest(fnName, payload) {
+function gwRequest(fnName, payload, timeoutMs) {
   if (!GATEWAY_BASE) return Promise.resolve(null);
   return new Promise((resolve) => {
     wx.request({
@@ -78,7 +80,7 @@ function gwRequest(fnName, payload) {
       method: 'POST',
       header: { 'content-type': 'application/json' },
       data: payload || {},
-      timeout: 15000,
+      timeout: timeoutMs || 15000,
       success: (res) => {
         let body = res && res.data;
         if (typeof body === 'string') {
@@ -99,9 +101,9 @@ function gwRequest(fnName, payload) {
 }
 
 /** 调 wxauth 网关 */
-function callApi(action, payload) {
+function callApi(action, payload, timeoutMs) {
   const data = Object.assign({ action: action, token: _token }, payload || {});
-  return gwRequest('wxauth', data);
+  return gwRequest('wxauth', data, timeoutMs);
 }
 
 /** wx.login → 云函数换 openid / token */
@@ -184,12 +186,12 @@ function db() {
 }
 
 /** token 失效时重登一次并重试 */
-function callApiRetry(action, payload) {
-  return callApi(action, payload).then((r) => {
+function callApiRetry(action, payload, timeoutMs) {
+  return callApi(action, payload, timeoutMs).then((r) => {
     if (r && r.code === 401) {
       _token = '';
       try { wx.removeStorageSync(TOKEN_STORAGE); } catch (e) { /* ignore */ }
-      return loginByWx().then(() => callApi(action, payload)).catch(() => r);
+      return loginByWx().then(() => callApi(action, payload, timeoutMs)).catch(() => r);
     }
     return r;
   });
@@ -289,6 +291,85 @@ function clearCollection(collectionName) {
     return callApiRetry('clear', { col: collectionName })
       .then((r) => (r && r.code === 0 ? (r.n || 0) : -1));
   });
+}
+
+// ---------- 云存储（回忆照片） ----------
+
+/** 从本地路径猜扩展名，默认 jpg */
+function guessExt(localPath) {
+  const m = /\.([A-Za-z0-9]+)(?:\?|$)/.exec(String(localPath || ''));
+  const e = m ? m[1].toLowerCase() : 'jpg';
+  return /^(jpg|jpeg|png|webp)$/.test(e) ? e : 'jpg';
+}
+
+/** 读本地文件为 base64（不含 data: 前缀） */
+function readFileBase64(localPath) {
+  return new Promise((resolve) => {
+    try {
+      wx.getFileSystemManager().readFile({
+        filePath: localPath,
+        encoding: 'base64',
+        success: (res) => resolve(res && res.data ? res.data : ''),
+        fail: (err) => {
+          console.error('[cb] 读本地图片失败:', (err && err.errMsg) || err);
+          resolve('');
+        }
+      });
+    } catch (e) {
+      resolve('');
+    }
+  });
+}
+
+/**
+ * 上传一张本地图片到云存储 → { fileID }
+ * 失败（未登录 / 无网关 / 过大 / 网络错）一律 resolve null，由业务层降级用本地路径展示。
+ * 图片先由调用方压缩到长边 1600 左右再传，避免撞网关体积上限。
+ */
+function uploadImage(localPath, ext) {
+  if (!localPath || !gwReady()) return Promise.resolve(null);
+  return ready().then((app) => {
+    if (!app) return null;
+    return readFileBase64(localPath).then((base64) => {
+      if (!base64) return null;
+      if (base64.length > UPLOAD_MAX_BASE64) {
+        console.warn('[cb] 图片超过体积上限，跳过上传:', localPath, base64.length);
+        return null;
+      }
+      return callApiRetry('upload', { base64: base64, ext: ext || guessExt(localPath) }, 30000)
+        .then((r) => (r && r.code === 0 && r.fileID ? { fileID: r.fileID } : null));
+    });
+  }).catch((err) => {
+    console.error('[cb] 上传失败:', (err && err.message) || err);
+    return null;
+  });
+}
+
+/** 批量 fileID → 临时链接（默认 2 小时），返回 { fileID: url } */
+function getFileUrls(fileIDs) {
+  const ids = (fileIDs || []).filter(Boolean);
+  if (!ids.length || !gwReady()) return Promise.resolve({});
+  return ready().then((app) => {
+    if (!app) return {};
+    return callApiRetry('fileUrl', { fileIDs: ids }).then((r) => {
+      if (!r || r.code !== 0) return {};
+      const map = {};
+      (r.list || []).forEach((it) => {
+        if (it && it.fileID && it.tempFileURL) map[it.fileID] = it.tempFileURL;
+      });
+      return map;
+    });
+  }).catch(() => ({}));
+}
+
+/** 删除云存储文件（条目删除时清理，失败静默容忍孤儿） */
+function deleteFiles(fileIDs) {
+  const ids = (fileIDs || []).filter(Boolean);
+  if (!ids.length || !gwReady()) return Promise.resolve(false);
+  return ready().then((app) => {
+    if (!app) return false;
+    return callApiRetry('delFiles', { fileIDs: ids }).then((r) => !!(r && r.code === 0));
+  }).catch(() => false);
 }
 
 // ---------- attractions（公开只读，直连更快） ----------
@@ -443,5 +524,8 @@ module.exports = {
   listDocs,
   setDoc,
   removeDoc,
-  clearCollection
+  clearCollection,
+  uploadImage,
+  getFileUrls,
+  deleteFiles
 };
