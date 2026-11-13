@@ -635,3 +635,14 @@
   background: rgba(110, 168, 254, 0.15);
   border: 1rpx solid rgba(110, 168, 254, 0.4);
 }
+
+.select-loop {
+  flex: 1.2;
+  text-align: center;
+  border-radius: 14rpx;
+  padding: 18rpx 0;
+  font-size: 26rpx;
+  color: var(--accent);
+  border: 1rpx dashed rgba(110, 168, 254, 0.5);
+  background: rgba(110, 168, 254, 0.08);
+}

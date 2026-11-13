@@ -341,10 +341,29 @@ Page({
         wx.showToast({ title: '该区域缺少中心点', icon: 'none' });
         return;
       }
-      stops.push({ adcode: region.adcode, name: region.name, center: center });
+      stops.push({ _k: this._stopSeq++, adcode: region.adcode, name: region.name, center: center });
     }
-    this.setData({ 'routeSelect.stops': stops });
+    this._applyStops(stops);
+  },
+
+  /** 统一更新选点站点：维护 closed 标记（首尾同城 = 闭合环线） */
+  _applyStops(stops) {
+    const closed = stops.length >= 3 && stops[stops.length - 1].adcode === stops[0].adcode;
+    this.setData({ 'routeSelect.stops': stops, 'routeSelect.closed': closed });
     this.draw();
+  },
+
+  /** 闭合环线：把首站追加到末尾（A→B→A）；已闭合时再点=取消闭合 */
+  onCloseLoop() {
+    const sel = this.data.routeSelect;
+    if (!sel || sel.stops.length < 2) return;
+    const stops = sel.stops.slice();
+    if (sel.closed) {
+      stops.pop();
+    } else {
+      stops.push(Object.assign({}, stops[0], { _k: this._stopSeq++ }));
+    }
+    this._applyStops(stops);
   },
 
   /** 归一化中心 → 经纬度（Web Mercator 反算） */
@@ -602,13 +621,15 @@ Page({
   onCreateRoute() {
     if (this.data.routeSelect) return;
     this.setData({ routeSheet: null });
+    this._stopSeq = 0;
     const start = () => {
       const d = new Date();
       const p = (n) => (n < 10 ? '0' + n : '' + n);
       this.setData({
         routeSelect: {
           name: '路线 ' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()),
-          stops: []
+          stops: [],
+          closed: false
         }
       });
       this.draw();
@@ -629,8 +650,7 @@ Page({
     const stops = this.data.routeSelect.stops.slice();
     if (i >= 0 && i < stops.length) {
       stops.splice(i, 1);
-      this.setData({ 'routeSelect.stops': stops });
-      this.draw();
+      this._applyStops(stops);
     }
   },
 

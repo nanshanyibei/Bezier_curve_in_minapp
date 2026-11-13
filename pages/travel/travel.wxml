@@ -155,7 +155,7 @@
     <input class="select-name" value="{{routeSelect.name}}" placeholder="路线名称"
            placeholder-class="select-name-ph" bindinput="onRouteName" />
     <scroll-view class="select-stops" scroll-x enable-flex>
-      <view wx:for="{{routeSelect.stops}}" wx:key="adcode" class="select-chip"
+      <view wx:for="{{routeSelect.stops}}" wx:key="_k" class="select-chip"
             data-i="{{index}}" catchtap="onRemoveStop">
         <text class="select-chip-idx">{{index + 1}}</text>
         <text class="select-chip-name">{{item.name}}</text>
@@ -165,6 +165,7 @@
     </scroll-view>
     <view class="select-btns">
       <view class="select-cancel" bindtap="onCancelRoute">取消</view>
+      <view wx:if="{{routeSelect.stops.length >= 2}}" class="select-loop" bindtap="onCloseLoop">{{routeSelect.closed ? '取消闭合' : '闭合环线'}}</view>
       <view class="select-done" bindtap="onFinishRoute">完成（{{routeSelect.stops.length}}）</view>
     </view>
   </view>
