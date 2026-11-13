@@ -72,7 +72,8 @@
       </view>
 
       <!-- 可滚动区：回忆 + 推荐（弹层限高 85%，超出在此滚动） -->
-      <scroll-view scroll-y class="sheet-scroll" enhanced show-scrollbar="{{false}}">
+      <view class="sheet-body">
+        <scroll-view scroll-y class="sheet-scroll" enhanced show-scrollbar="{{false}}">
         <!-- 我的回忆（排在景点推荐之前：我经历了什么 > 这里有什么可看） -->
         <view class="mems">
           <view class="mems-head">
@@ -117,7 +118,8 @@
             </view>
           </view>
         </view>
-      </scroll-view>
+        </scroll-view>
+      </view>
 
       <view class="sheet-hint text-dim">{{sheet.hint}}</view>
     </view>

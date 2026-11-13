@@ -215,10 +215,17 @@
   overflow: hidden;
 }
 
-/* 可滚动区：吃掉剩余高度，超出内部滚动 */
-.sheet-scroll {
+/* 可滚动区外层：吃掉剩余高度并裁剪（普通 view 的 flex 高度在真机上可靠，
+   scroll-view 直接 flex 拿高度会失效导致不滚动、内容溢出到兄弟节点上） */
+.sheet-body {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+}
+
+/* scroll-view 拿父容器的确定高度才会滚动 */
+.sheet-scroll {
+  height: 100%;
 }
 
 .sheet-title {
