@@ -23,14 +23,13 @@ const OUT = path.join(ROOT, 'dist', 'prod');
 const TOP_ENTRIES = ['app.js', 'app.json', 'app.wxss', 'config.js', 'sitemap.json', 'pages', 'utils', 'assets'];
 
 /** 生产包剔除的页面目录（相对 pages/） */
-const DROP_PAGES = ['assistant', 'insight', 'index', 'share'];
+const DROP_PAGES = [];
 
 /** 生产包剔除的工具模块（相对 utils/） */
-const DROP_UTILS = ['ai.js', 'sse.js', 'insightPrompt.js', 'insightParse.js'];
+const DROP_UTILS = ['ai.js'];
 
 /** 生产包页面清单，顺序即注册顺序 */
 const PROD_PAGES = [
-  'pages/diary/diary',
   'pages/travel/travel',
   'pages/travel/list/list',
   'pages/travel/memory/memory',

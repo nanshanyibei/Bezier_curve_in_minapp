@@ -25,10 +25,10 @@ node scripts/build.js prod
 
 构建会：
 1. 按白名单拷贝到 `dist/prod`
-2. 剔除 `pages/assistant`、`pages/insight`、`pages/index`、`pages/share` 与 `utils/ai.js`、`utils/sse.js`、`utils/insight*.js`
-3. 剥离所有 `@dev:begin` / `@dev:end` 标记块
+2. 剔除 `utils/ai.js`（本地 LLM 直连兜底）
+3. 剥离所有 `@dev:begin` / `@dev:end` 标记块（含旅行页「AI 补充」入口）
 4. 重写 `app.json` 的 `pages`
-5. 残留关键词校验（AI 字样、模型服务商、AI 页面路由等），命中即构建失败
+5. 残留关键词校验（AI 字样、模型服务商等），命中即构建失败
 
 然后：开发者工具 → 导入项目 → 选 `dist/prod` → 上传。
 
@@ -50,9 +50,9 @@ onDevOnly() {}
 
 ## 目录约定
 
-- `pages/diary` 日记（本地存储）
-- `pages/travel` 旅行足迹地图（canvas + 行政区划边界）
+- `pages/travel` 旅行足迹地图（首页，canvas + 行政区划边界），含清单 `list`、回忆册 `memory`
+- `pages/my` 我的（数据概览、隐私指引），从旅行页顶部「我的」进入
+- 无 tab 栏，单入口应用
 - `pages/travel/list` 足迹清单（省级分组、覆盖率、点条目回地图定位）
 - `pages/travel/memory` 城市回忆册 + 编辑页（一城多条、文字/照片/日期，照片存本地永久路径并异步上云换 fileID，失败降级本地展示）
 - `pages/my` 我的（数据概览、隐私指引）
-- `pages/assistant`、`pages/insight` AI 能力，**仅 dev**

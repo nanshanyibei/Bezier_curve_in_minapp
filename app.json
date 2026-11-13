@@ -1,15 +1,10 @@
 {
   "pages": [
-    "pages/diary/diary",
     "pages/travel/travel",
     "pages/travel/list/list",
     "pages/travel/memory/memory",
     "pages/travel/memory/edit/edit",
     "pages/my/my",
-    "pages/assistant/assistant",
-    "pages/insight/insight",
-    "pages/index/index",
-    "pages/share/share",
     "pages/my/privacy/privacy"
   ],
   "subpackages": [
@@ -29,32 +24,6 @@
     "navigationBarBackgroundColor": "#1e1e24",
     "navigationBarTitleText": "南山工作台",
     "navigationBarTextStyle": "white"
-  },
-  "tabBar": {
-    "color": "#8b8b96",
-    "selectedColor": "#6ea8fe",
-    "backgroundColor": "#1e1e24",
-    "borderStyle": "black",
-    "list": [
-      {
-        "pagePath": "pages/diary/diary",
-        "text": "日记",
-        "iconPath": "assets/tab/diary.png",
-        "selectedIconPath": "assets/tab/diary-active.png"
-      },
-      {
-        "pagePath": "pages/travel/travel",
-        "text": "旅行",
-        "iconPath": "assets/tab/travel.png",
-        "selectedIconPath": "assets/tab/travel-active.png"
-      },
-      {
-        "pagePath": "pages/my/my",
-        "text": "我的",
-        "iconPath": "assets/tab/my.png",
-        "selectedIconPath": "assets/tab/my-active.png"
-      }
-    ]
   },
   "networkTimeout": {
     "request": 60000

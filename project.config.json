@@ -116,15 +116,8 @@
       "list": [
         {
           "id": 0,
-          "name": "pages/index/index",
-          "pathName": "pages/index/index",
-          "query": "",
-          "scene": 1044
-        },
-        {
-          "id": 1,
-          "name": "pages/share/share",
-          "pathName": "pages/share/share",
+          "name": "pages/travel/travel",
+          "pathName": "pages/travel/travel",
           "query": "",
           "scene": 1044
         }

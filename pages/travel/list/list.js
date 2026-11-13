@@ -75,12 +75,12 @@ Page({
     if (!adcode) return;
     const app = getApp();
     if (app && app.globalData) app.globalData.travelFocus = adcode;
-    // 清单页若为页面栈首页（分享/扫码直接进入），navigateBack 会失败，改走 switchTab
+    // 清单页若为页面栈首页（分享/扫码直接进入），navigateBack 会失败，改走 reLaunch
     const pages = getCurrentPages();
     if (pages.length > 1) {
       wx.navigateBack({ delta: 1 });
     } else {
-      wx.switchTab({ url: '/pages/travel/travel' });
+      wx.reLaunch({ url: '/pages/travel/travel' });
     }
   }
 });

@@ -1,13 +1,10 @@
-const diaryStore = require('../../utils/diaryStore');
 const travelStore = require('../../utils/travelStore');
 const cb = require('../../utils/cb');
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 
 Page({
   data: {
-    diaryCount: 0,
-    diaryChars: 0,
     visitedCount: 0,
     syncText: '正在连接…',
     syncOk: false,
@@ -23,13 +20,8 @@ Page({
   },
 
   refresh() {
-    const d = diaryStore.stats();
     const t = travelStore.stats();
-    this.setData({
-      diaryCount: d.count,
-      diaryChars: d.chars,
-      visitedCount: t.visited
-    });
+    this.setData({ visitedCount: t.visited });
   },
 
   /** 云端登录态展示：已登录 = 数据跟微信走，删小程序也能找回 */
@@ -46,16 +38,6 @@ Page({
     });
   },
 
-  /* @dev:begin */
-  onAiAssistant() {
-    wx.navigateTo({ url: '/pages/assistant/assistant' });
-  },
-
-  onPoster() {
-    wx.navigateTo({ url: '/pages/index/index' });
-  },
-  /* @dev:end */
-
   onPrivacy() {
     wx.navigateTo({ url: '/pages/my/privacy/privacy' });
   },
@@ -63,7 +45,7 @@ Page({
   onAbout() {
     wx.showModal({
       title: '关于',
-      content: '南山工作台 v' + VERSION + '\n\n日记与旅行标记会同步到云端，并以微信身份标识。删除小程序或换手机后，重新进入即可自动认回数据。',
+      content: '南山工作台 v' + VERSION + '\n\n旅行标记会同步到云端，并以微信身份标识。删除小程序或换手机后，重新进入即可自动认回数据。',
       showCancel: false,
       confirmText: '知道了'
     });

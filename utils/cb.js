@@ -423,6 +423,7 @@ function fetchAttractions(adcode, fallbackCode, limit) {
   });
 }
 
+/* @dev:begin */
 /** 与服务端 genAttraction 保持同一套提示词（云函数独立打包，无法共用文件，改动需两边同步） */
 function buildGenPrompt(adcode, scope) {
   return '你是旅行顾问。请推荐 ' + scope + '（行政区划代码 ' + adcode + '）最有代表性的 5 个景点或体验，'
@@ -508,6 +509,7 @@ function genAttractions(adcode, regionName, parentName) {
     });
   });
 }
+/* @dev:end */
 
 module.exports = {
   ready,
@@ -520,7 +522,9 @@ module.exports = {
   fetchMarks,
   pushMark,
   fetchAttractions,
+  /* @dev:begin */
   genAttractions,
+  /* @dev:end */
   listDocs,
   setDoc,
   removeDoc,

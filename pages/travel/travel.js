@@ -147,6 +147,10 @@ Page({
     wx.navigateTo({ url: '/pages/travel/list/list' });
   },
 
+  onOpenMy() {
+    wx.navigateTo({ url: '/pages/my/my' });
+  },
+
   // ---------- 从清单页定位 ----------
   findRegion(layer, adcode) {
     if (!layer || !layer.regions) return null;
@@ -401,10 +405,12 @@ Page({
     return code.length >= 6 ? (parseInt(code.slice(0, 2), 10) * 10000) + '00' : code;
   },
 
+  /* @dev:begin */
   /** 兜底省级名称（AI 提示词用） */
   parentName() {
     return this.data.level === 'province' ? this.data.currentName : '';
   },
+  /* @dev:end */
 
   /** 弹层景点：云端查询（带缓存）→ 空则用种子兜底 */
   loadSpots(region, forceRefresh) {
@@ -420,6 +426,7 @@ Page({
     });
   },
 
+  /* @dev:begin */
   /** 「AI 补充更多」：云函数 LLM 生成并写库，成功后刷新弹层（服务端无 key 时自动退回本地直连） */
   onGenAttractions() {
     const region = this._sheetRegion;
@@ -436,6 +443,7 @@ Page({
       if (!list.length) wx.showToast({ title: '生成失败，稍后再试', icon: 'none' });
     });
   },
+  /* @dev:end */
 
   /** 弹层「查看市界」：先关弹层（遮罩会挡住切层动画），再复用 drillTo */
   onDrill() {

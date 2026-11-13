@@ -1,6 +1,8 @@
-const diaryStore = require('../../../utils/diaryStore');
 const travelStore = require('../../../utils/travelStore');
 const cb = require('../../../utils/cb');
+
+// 旧版日记功能的存储键（功能已下线，清除数据时仍需清理残留）
+const LEGACY_DIARY_KEY = 'diary.entries';
 
 Page({
   data: {
@@ -26,7 +28,7 @@ Page({
       confirmColor: '#ef7d7d',
       success: (res) => {
         if (!res.confirm) return;
-        wx.removeStorageSync(diaryStore.KEY);
+        wx.removeStorageSync(LEGACY_DIARY_KEY);
         wx.removeStorageSync(travelStore.KEY);
         wx.showToast({ title: '已清除本机缓存', icon: 'success' });
       }
@@ -51,7 +53,7 @@ Page({
           const failed = r.some((n) => n < 0);
           // 云端删干净了才清本地，避免本地没了云端还在
           if (!failed) {
-            wx.removeStorageSync(diaryStore.KEY);
+            wx.removeStorageSync(LEGACY_DIARY_KEY);
             wx.removeStorageSync(travelStore.KEY);
             wx.removeStorageSync('chat.messages');
             wx.removeStorageSync('chat.updatedAt');

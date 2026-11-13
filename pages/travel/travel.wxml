@@ -11,6 +11,7 @@
     <view wx:if="{{level === 'province'}}" class="chip back" bindtap="onBack">‹ 全国</view>
     <view class="chip title">{{currentName}}</view>
     <view class="chip list" bindtap="onOpenList">清单</view>
+    <view class="chip list" bindtap="onOpenMy">我的</view>
   </view>
 
   <!-- 操作提示 -->
@@ -92,11 +93,13 @@
       <view class="spots">
         <view class="spots-head">
           <text class="spots-title">当地推荐</text>
+          <!-- @dev:begin -->
           <text class="spots-more {{sheet.spotsLoading ? 'loading' : ''}}"
                 bindtap="onGenAttractions">{{sheet.spotsLoading ? '生成中…' : 'AI 补充'}}</text>
+          <!-- @dev:end -->
         </view>
         <view wx:if="{{!sheet.spotsLoading && sheet.spots.length === 0}}" class="spots-empty text-dim">
-          暂无推荐 · 点右上角让 AI 补充
+          暂无推荐
         </view>
         <view wx:for="{{sheet.spots}}" wx:key="name" class="spot">
           <image wx:if="{{item.img}}" class="spot-img" src="{{item.img}}" mode="aspectFill" />
