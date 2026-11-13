@@ -28,7 +28,8 @@ Page({
     sheet: null,               // { name, adcode, levelLabel, status }
     routeSheet: null,          // { routes: [{ id, name, status, hidden, count, km }] }
     routeSelect: null,         // { name, stops: [{ adcode, name, center }] } 新建路线选点态
-    attrOn: false              // 5A 景点图层（默认关，记忆上次选择）
+    attrOn: false,             // 5A 景点图层（默认关，记忆上次选择）
+    attrSheet: null            // { provName, count, groups: [{ city, items: [{name, year}] }] }
   },
 
   // 非响应式运行时
@@ -256,8 +257,133 @@ Page({
       useCoarse: this._useCoarse,
       routes: this._routes,
       routeAnim: this._routeAnim,
-      selectStops: this.data.routeSelect ? this.data.routeSelect.stops : null
+      selectStops: this.data.routeSelect ? this.data.routeSelect.stops : null,
+      attractions: this.data.attrOn ? this._attrData() : null
     });
+  },
+
+  /** 图层数据：全国给省级气泡，省内给该省景点点位 */
+  _attrData() {
+    if (this.data.level === 'country') {
+      return { on: true, level: 'country', points: this._attrPointsOf(), spots: [] };
+    }
+    const provAdcode = this._layer && this._layer.adcode;
+    return {
+      on: true,
+      level: 'province',
+      points: [],
+      spots: provAdcode ? attractionLayer.spotsOf(provAdcode) : []
+    };
+  },
+
+  /** 全国气泡数据：省级图层每个省的中心 + 该省 5A 数量（懒构建，图层换了才重建） */
+  _attrPointsOf() {
+    const layer = this._countryLayer;
+    if (!layer) return [];
+    if (this._attrPoints && this._attrPointsFor === layer) return this._attrPoints;
+    const byAd = {};
+    layer.regions.forEach((r) => { byAd[r.adcode] = r; });
+    const pts = [];
+    attractionLayer.provinces().forEach((p) => {
+      const r = byAd[String(p.adcode)];
+      if (!r || !r.centerLL) return;   // 地图上没有的省（如台湾无 5A）跳过
+      pts.push({ adcode: p.adcode, name: p.name, n: p.n, lng: r.centerLL[0], lat: r.centerLL[1] });
+    });
+    this._attrPoints = pts;
+    this._attrPointsFor = layer;
+    return pts;
+  },
+
+  /** 景点图层开关：状态落 storage，下次进来还是这个选择 */
+  onToggleAttr() {
+    const on = !this.data.attrOn;
+    this.setData({ attrOn: on });
+    try { wx.setStorageSync(ATTR_KEY, on ? 1 : 0); } catch (e) { /* 存不下不影响本次会话 */ }
+    if (!on && this.data.attrSheet) this.setData({ attrSheet: null });
+    this.draw();
+  },
+
+  /** 点气泡：直接列出这个省的全部 5A，按城市分组、组内新评定在前 */
+  openAttrSheet(p) {
+    const raw = attractionLayer.spotsOf(p.adcode);
+    if (!raw.length) {
+      wx.showToast({ title: '这个省暂时没有 5A 数据', icon: 'none' });
+      return;
+    }
+    this._showSpots(p.adcode, p.name, raw);
+  },
+
+  /** 聚点/单点：只列这一处的几个景区，不给「在地图上查看」 */
+  openSpotsSheet(title, items) {
+    this._showSpots('', title, items);
+  },
+
+  /** 统一渲染成按城市分组的名录弹层 */
+  _showSpots(adcode, title, list) {
+    const map = {};
+    list.forEach((s) => {
+      const c = s.city || '其他';
+      (map[c] || (map[c] = [])).push(s);
+    });
+    const groups = Object.keys(map).map((city) => ({
+      city: city,
+      items: map[city]
+        .sort((a, b) => parseInt(b.year, 10) - parseInt(a.year, 10))
+        .map((s) => ({ name: s.name, year: s.year }))
+    })).sort((a, b) => b.items.length - a.items.length);
+
+    this.setData({
+      attrSheet: {
+        adcode: adcode,
+        provName: title,
+        count: list.length,
+        groups: groups,
+        noMap: !adcode
+      }
+    });
+  },
+
+  closeAttrSheet() {
+    this.setData({ attrSheet: null });
+  },
+
+  /** 从清单跳到地图：收起弹层并下钻到该省，看得到点位和名字 */
+  onAttrShowMap() {
+    const s = this.data.attrSheet;
+    if (!s) return;
+    this.setData({ attrSheet: null });
+    this.focusAdcode(String(s.adcode));
+  },
+
+  /** 点击命中：全国命中省气泡，省级命中景点点/聚合点。布局与绘制共用，保证点哪得哪 */
+  attrHit(x, y) {
+    if (!this.data.attrOn || this.data.routeSelect || !this._view || !this._layer) return null;
+    const pr = this._layer.proj;
+    if (!pr) return null;
+    const v = this._view;
+
+    if (this.data.level === 'country') {
+      const arr = geoRender.layoutBubbles(this._attrPointsOf(), pr, v.scale, v.tx, v.ty, this._W, this._H);
+      for (let i = 0; i < arr.length; i++) {
+        const p = arr[i];
+        if (Math.hypot(x - p.x, y - p.y) <= p.r + 6) {
+          return { kind: 'province', adcode: p.adcode, name: p.name, n: p.n };
+        }
+      }
+      return null;
+    }
+
+    const spots = attractionLayer.spotsOf(this._layer.adcode);
+    if (!spots.length) return null;
+    const cs = geoRender.layoutSpots(spots, pr, v.scale, v.tx, v.ty, this._W, this._H);
+    for (let i = 0; i < cs.length; i++) {
+      const c = cs[i];
+      const pad = c.items.length > 1 ? 12 : 9;
+      if (Math.hypot(x - c.x, y - c.y) <= pad) {
+        return { kind: c.items.length > 1 ? 'cluster' : 'spot', items: c.items };
+      }
+    }
+    return null;
   },
 
   // ---------- 触摸 ----------
@@ -319,6 +445,16 @@ Page({
 
   // ---------- 点选 ----------
   handleTap(x, y) {
+    // 景点图层优先于区域命中：气泡看全省名录，点位看这一处
+    if (!this.data.routeSelect && !this.data.loading) {
+      const hit = this.attrHit(x, y);
+      if (hit) {
+        if (hit.kind === 'province') this.openAttrSheet(hit);
+        else if (hit.kind === 'cluster') this.openSpotsSheet('这一处', hit.items);
+        else this.openSpotsSheet(hit.items[0].name, hit.items);
+        return;
+      }
+    }
     const wpt = geoMap.screenToWorld(this._view, x, y);
     const region = geoMap.hitTest(this._layer, wpt[0], wpt[1]);
     if (!region) return;
@@ -550,7 +686,7 @@ Page({
   },
 
   /* @dev:begin */
-  /** 兜底省级名称（AI 提示词用） */
+  /** 兜底省级名称（云端推荐提示词用） */
   parentName() {
     return this.data.level === 'province' ? this.data.currentName : '';
   },
@@ -571,12 +707,12 @@ Page({
   },
 
   /* @dev:begin */
-  /** 「AI 补充更多」：云函数 LLM 生成并写库，成功后刷新弹层（服务端无 key 时自动退回本地直连） */
+  /** 云端补充更多：云函数 LLM 生成并写库，成功后刷新弹层（服务端无 key 时自动退回本地直连） */
   onGenAttractions() {
     const region = this._sheetRegion;
     if (!region || !this.data.sheet || this.data.sheet.spotsLoading) return;
     if (!cb.cloudReady()) {
-      wx.showToast({ title: '未配置云端，无法 AI 补充', icon: 'none' });
+      wx.showToast({ title: '未配置云端，暂时无法补充', icon: 'none' });
       return;
     }
     this.setData({ 'sheet.spotsLoading': true });

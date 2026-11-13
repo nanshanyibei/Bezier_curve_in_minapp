@@ -18,6 +18,7 @@ const PALETTE = {
   accent: '#6ea8fe',                          // --accent 选中/高亮
   jdStroke: '#7f8aa0',                        // 九段线
   attrFill: 'rgba(167,139,250,0.92)',         // 5A 景点气泡（紫，区别于足迹绿/橙与路线蓝）
+  attrSpot: '#c4b5fd',                        // 省内景点小圆点
   attrRim: '#10131a'
 };
 
@@ -203,11 +204,17 @@ function paintRoute(ctx, stops, lineColor, dashed, pr, scale, tx, ty, W, H, with
   }
 }
 
+function radiusOf(n) {
+  return n >= 20 ? 11 : n >= 10 ? 10 : 9;
+}
+
 /**
- * 5A 景点气泡（全国视图）：每个省级行政区一个圆，数字是该省 5A 数量。
- * points 由页面按省级图层中心点构造，这里只负责投影与描画。
+ * 气泡避让：东部小省（京津、苏皖、沪浙）在 375 宽屏上只隔 7~17px，
+ * 直接按省中心画会叠在一起。这里做几轮确定性松弛把它们推开，
+ * 并限制单点最大位移，避免气泡飘到别的省里去。
  */
-function paintAttractionBubbles(ctx, points, pr, scale, tx, ty, W, H, lite) {
+function layoutBubbles(points, pr, scale, tx, ty, W, H) {
+  const arr = [];
   for (let i = 0; i < points.length; i++) {
     const p = points[i];
     if (!p || !p.n) continue;
@@ -215,9 +222,62 @@ function paintAttractionBubbles(ctx, points, pr, scale, tx, ty, W, H, lite) {
     const x = ((pj[0] - pr.minX) / pr.w) * scale + tx;
     const y = ((pr.maxY - pj[1]) / pr.w) * scale + ty;
     if (x < -20 || y < -20 || x > W + 20 || y > H + 20) continue;
-    const r = p.n >= 20 ? 11 : p.n >= 10 ? 10 : 9;
+    arr.push({ adcode: p.adcode, name: p.name, n: p.n, x: x, y: y, ox: x, oy: y, r: radiusOf(p.n) });
+  }
+
+  const MAX_SHIFT = 15;
+  for (let it = 0; it < 24; it++) {
+    let moved = false;
+    for (let i = 0; i < arr.length; i++) {
+      for (let j = i + 1; j < arr.length; j++) {
+        const a = arr[i];
+        const b = arr[j];
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let d = Math.sqrt(dx * dx + dy * dy);
+        const need = a.r + b.r + 3;
+        if (d >= need) continue;
+        if (d < 0.5) {
+          // 完全重合时按索引给一个固定方向，保证每帧结果一致（不抖）
+          const ang = ((i * 37 + j * 11) % 360) * Math.PI / 180;
+          dx = Math.cos(ang);
+          dy = Math.sin(ang);
+          d = 1;
+        }
+        const push = (need - d) * 0.5 * 0.6;
+        const ux = dx / d;
+        const uy = dy / d;
+        a.x -= ux * push; a.y -= uy * push;
+        b.x += ux * push; b.y += uy * push;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+
+  for (let i = 0; i < arr.length; i++) {
+    const p = arr[i];
+    const dx = p.x - p.ox;
+    const dy = p.y - p.oy;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d > MAX_SHIFT) {
+      p.x = p.ox + (dx / d) * MAX_SHIFT;
+      p.y = p.oy + (dy / d) * MAX_SHIFT;
+    }
+  }
+  return arr;
+}
+
+/**
+ * 5A 景点气泡（全国视图）：每个省级行政区一个圆，数字是该省 5A 数量。
+ * points 由页面按省级图层中心点构造，这里负责投影、避让与描画。
+ */
+function paintAttractionBubbles(ctx, points, pr, scale, tx, ty, W, H, lite) {
+  const arr = layoutBubbles(points, pr, scale, tx, ty, W, H);
+  for (let i = 0; i < arr.length; i++) {
+    const p = arr[i];
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
     ctx.fillStyle = PALETTE.attrFill;
     ctx.fill();
     ctx.lineWidth = 1.5;
@@ -228,8 +288,132 @@ function paintAttractionBubbles(ctx, points, pr, scale, tx, ty, W, H, lite) {
       ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(String(p.n), x, y + 0.5);
+      ctx.fillText(String(p.n), p.x, p.y + 0.5);
     }
+  }
+}
+
+/** 省内景点点位布局：投影 + 屏幕空间聚合。绘制与点击命中共用，保证看到哪点哪 */
+function layoutSpots(spots, pr, scale, tx, ty, W, H) {
+  const arr = [];
+  for (let i = 0; i < spots.length; i++) {
+    const s = spots[i];
+    if (!s || !s.lat || !s.lng) continue;
+    const pj = project(s.lng, s.lat);
+    const x = ((pj[0] - pr.minX) / pr.w) * scale + tx;
+    const y = ((pr.maxY - pj[1]) / pr.w) * scale + ty;
+    if (x < -24 || y < -24 || x > W + 24 || y > H + 24) continue;
+    arr.push({ name: s.name, city: s.city, year: s.year, x: x, y: y, r: 3.5 });
+  }
+
+  // 屏幕空间聚合：一个点 + 附近的合成一个，避免字压字
+  const MIN = 24;
+  const clusters = [];
+  for (let i = 0; i < arr.length; i++) {
+    const p = arr[i];
+    let merged = false;
+    for (let j = 0; j < clusters.length; j++) {
+      const c = clusters[j];
+      if (Math.hypot(c.x - p.x, c.y - p.y) <= MIN) {
+        c.items.push(p);
+        c.x = (c.x * (c.items.length - 1) + p.x) / c.items.length;
+        c.y = (c.y * (c.items.length - 1) + p.y) / c.items.length;
+        c.r = 10;
+        merged = true;
+        break;
+      }
+    }
+    if (!merged) clusters.push({ x: p.x, y: p.y, r: 3.5, items: [p] });
+  }
+  return clusters;
+}
+
+/**
+ * 5A 景点点位（省级视图）：密集处先按屏幕距离聚合，再给每个点标名字。
+ * 名字宽度按 9px/字估算做矩形碰撞检测，挤不下的只留点不留字，
+ * 这样放大后名字会自然多出来，缩小时也不会糊成一团。
+ */
+function paintAttractionSpots(ctx, spots, pr, scale, tx, ty, W, H, lite) {
+  const clusters = layoutSpots(spots, pr, scale, tx, ty, W, H);
+
+  const placed = [];
+  const hits = (b) => {
+    for (let i = 0; i < placed.length; i++) {
+      const q = placed[i];
+      if (b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1]) return true;
+    }
+    return false;
+  };
+
+  for (let i = 0; i < clusters.length; i++) {
+    const c = clusters[i];
+
+    // 合点：圆里写数字，下方补「首点名 等N」标签（放得下就放，挤了就只有数字）
+    if (c.items.length > 1) {
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 10, 0, Math.PI * 2);
+      ctx.fillStyle = PALETTE.attrFill;
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = PALETTE.attrRim;
+      ctx.stroke();
+      if (!lite) {
+        ctx.fillStyle = PALETTE.attrRim;
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(c.items.length), c.x, c.y + 0.5);
+
+        const label = c.items[0].name + ' 等' + c.items.length;
+        const tw = label.length * 9;
+        const box = [c.x - tw / 2, c.y + 12, c.x + tw / 2, c.y + 26];
+        if (box[0] > 2 && box[2] < W - 2 && !hits(box)) {
+          placed.push(box);
+          ctx.font = '9px sans-serif';
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = 'rgba(12,14,20,0.92)';
+          if (ctx.strokeText) ctx.strokeText(label, c.x, c.y + 19);
+          ctx.fillStyle = 'rgba(228,232,240,0.96)';
+          ctx.fillText(label, c.x, c.y + 19);
+        }
+      }
+      continue;
+    }
+
+    const p = c.items[0];
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = PALETTE.attrSpot;
+    ctx.fill();
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = PALETTE.attrRim;
+    ctx.stroke();
+
+    if (lite) continue;
+
+    // 名字默认放右侧，贴右边界时翻到左侧
+    const tw = p.name.length * 9;
+    let bx = p.x + 7;
+    let align = 'left';
+    if (bx + tw > W - 4) {
+      bx = p.x - 7;
+      align = 'right';
+    }
+    const box = align === 'left'
+      ? [bx, p.y - 7, bx + tw, p.y + 7]
+      : [bx - tw, p.y - 7, bx, p.y + 7];
+    if (hits(box)) continue;
+    placed.push(box);
+
+    // 描边打底：深色地图上纯文字会陷进背景
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = align;
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = 'rgba(12,14,20,0.92)';
+    if (ctx.strokeText) ctx.strokeText(p.name, bx, p.y);
+    ctx.fillStyle = 'rgba(228,232,240,0.96)';
+    ctx.fillText(p.name, bx, p.y);
   }
 }
 
@@ -379,9 +563,13 @@ function drawScene(ctx, s) {
     }
   }
 
-  // 7.5 5A 景点图层（全国视图画省级气泡；气泡压在足迹点之上、路线之下）
-  if (attrOn && s.level === 'country' && layer.proj && s.attractions.points && s.attractions.points.length) {
-    paintAttractionBubbles(ctx, s.attractions.points, layer.proj, scale, tx, ty, W, H, lite);
+  // 7.5 5A 景点图层：全国画省级气泡，省内画景点点位与名字
+  if (attrOn && layer.proj && s.attractions) {
+    if (s.level === 'country' && s.attractions.points && s.attractions.points.length) {
+      paintAttractionBubbles(ctx, s.attractions.points, layer.proj, scale, tx, ty, W, H, lite);
+    } else if (s.level === 'province' && s.attractions.spots && s.attractions.spots.length) {
+      paintAttractionSpots(ctx, s.attractions.spots, layer.proj, scale, tx, ty, W, H, lite);
+    }
   }
 
   // 8. 路线层：已保存路线 + 新建选点预览（省级层也画，选市时能看到已选站点连线）
@@ -470,4 +658,14 @@ function createRenderer(canvas, ctx) {
 }
 
 // paintRoute 是纯绘制函数，一并导出：打卡生长动画的截断/脉冲逻辑可单测
-module.exports = { PALETTE, createRenderer, drawScene, statusOf, paintRoute, paintAttractionBubbles };
+module.exports = {
+  PALETTE,
+  createRenderer,
+  drawScene,
+  statusOf,
+  paintRoute,
+  paintAttractionBubbles,
+  paintAttractionSpots,
+  layoutBubbles,
+  layoutSpots
+};

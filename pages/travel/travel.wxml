@@ -22,6 +22,13 @@
   <view class="hint hint-select" wx:if="{{routeSelect && level === 'country'}}">点省份进入选市 · 无下级地区直接成站</view>
   <view class="hint hint-select" wx:if="{{routeSelect && level === 'province'}}">点选城市加入路线 · 再点一次移除 · 点「‹ 全国」换省</view>
 
+  <!-- 5A 景点图层开关（默认关；数字气泡是该省 5A 数量，点气泡进省） -->
+  <view wx:if="{{!routeSelect}}" id="attr-toggle"
+        class="attr-btn {{attrOn ? 'on' : ''}}" bindtap="onToggleAttr">
+    <view class="attr-dot"></view>
+    <text>5A 景点</text>
+  </view>
+
   <!-- 图例（可点，兼作筛选器；选点模式下隐藏避免与选点条重叠） -->
   <view class="legend" wx:if="{{!routeSelect}}">
     <view class="legend-item {{filter === 'all' ? 'on' : ''}}" data-f="all" bindtap="onFilter">
@@ -194,6 +201,24 @@
 
       <view class="rd-del-route" bindtap="onDeleteRoute" data-id="{{routeSheet.detail.id}}">删除这条路线</view>
     </block>
+  </view>
+
+  <!-- 5A 景点名录弹层：点气泡出全省，点地图上的点出这一处 -->
+  <view wx:if="{{attrSheet}}" class="sheet-mask" bindtap="closeAttrSheet" catchtouchmove="noop"></view>
+  <view wx:if="{{attrSheet}}" class="sheet" catchtap="noop">
+    <view class="sheet-title">{{attrSheet.provName}}</view>
+    <view class="sheet-sub text-dim">{{attrSheet.count}} 家国家 5A 级旅游景区 · 名录截至 2025-03</view>
+    <view wx:if="{{!attrSheet.noMap}}" class="attr-map-link" bindtap="onAttrShowMap">在地图上查看 ›</view>
+
+    <view class="sheet-body">
+      <view wx:for="{{attrSheet.groups}}" wx:key="city" class="attr-group">
+        <view class="attr-city">{{item.city}}</view>
+        <view wx:for="{{item.items}}" wx:for-item="sp" wx:key="name" class="attr-item">
+          <text class="attr-name">{{sp.name}}</text>
+          <text class="attr-year">{{sp.year}}</text>
+        </view>
+      </view>
+    </view>
   </view>
 
   <!-- 新建路线选点条：不遮挡地图，地图可继续拖拽缩放与点选 -->

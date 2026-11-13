@@ -433,7 +433,7 @@ function buildGenPrompt(adcode, scope) {
     + '只输出 JSON 数组，不要任何其他文字。';
 }
 
-/** 本地已配置的 LLM key（「AI 助手」页填过才有） */
+/** 本地已配置的 LLM key（开发期在助手设置页填过才有） */
 function readLocalLlmKey() {
   try {
     const ai = require('./ai');
@@ -445,7 +445,7 @@ function readLocalLlmKey() {
 
 /**
  * 本地兜底生成：云函数没配 SILICONFLOW_KEY 或网关失败时，
- * 用用户在「AI 助手」页填过的 key 直连 LLM（开发期路径）。
+ * 用用户在本地设置页填过的 key 直连 LLM（开发期路径）。
  */
 function localGen(adcode, scope) {
   let ai;
@@ -474,7 +474,7 @@ function localGen(adcode, scope) {
     if (list.length) writeCache(adcode, list);
     return list;
   }).catch((err) => {
-    console.error('[cb] 本地 AI 生成失败:', (err && err.message) || err);
+    console.error('[cb] 本地生成失败:', (err && err.message) || err);
     return [];
   });
 }
