@@ -16,7 +16,9 @@ const PALETTE = {
   wantFill: 'rgba(240,179,94,0.30)',          // --orange #f0b35e
   wantStroke: '#f0b35e',
   accent: '#6ea8fe',                          // --accent 选中/高亮
-  jdStroke: '#7f8aa0'                         // 九段线
+  jdStroke: '#7f8aa0',                        // 九段线
+  attrFill: 'rgba(167,139,250,0.92)',         // 5A 景点气泡（紫，区别于足迹绿/橙与路线蓝）
+  attrRim: '#10131a'
 };
 
 function addRegionPath(ctx, region, useCoarse, scale, tx, ty) {
@@ -51,45 +53,134 @@ function statusOf(m) {
   return (m && m.status) || '';
 }
 
+/** 二次贝塞尔采样（含首尾），用于按弧长截断绘制 */
+function sampleQuad(p0, c, p1, n) {
+  const out = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const mt = 1 - t;
+    out.push([
+      mt * mt * p0[0] + 2 * mt * t * c[0] + t * t * p1[0],
+      mt * mt * p0[1] + 2 * mt * t * c[1] + t * t * p1[1]
+    ]);
+  }
+  return out;
+}
+
 /**
  * 步骤 8：路线层（仅全国视图）
  * - stops 缺 center 的站点跳过该段（断链续画）
  * - 相同两端点的边（回折 A→B→A）自动翻弯曲方向，避免两段弧重合
  * - route: { status, stops }；plan=虚线蓝、done=实线绿；节点带序号
+ * - anim: { progress } 传入时走「打卡生长」路径：按弧长截断线条，已经过的站点弹脉冲环
  */
-function paintRoute(ctx, stops, lineColor, dashed, pr, scale, tx, ty, W, H, withLabels) {
+function paintRoute(ctx, stops, lineColor, dashed, pr, scale, tx, ty, W, H, withLabels, anim) {
   if (!stops || stops.length < 2) return;
   const toXY = (ll) => {
     const pj = project(ll[0], ll[1]);
     return [(pj[0] - pr.minX) / pr.w * scale + tx, (pr.maxY - pj[1]) / pr.w * scale + ty];
   };
   const pts = stops.map((st) => (st.center ? toXY(st.center) : null));
+  const progress = anim && typeof anim.progress === 'number' ? Math.max(0, Math.min(1, anim.progress)) : 1;
 
-  // 弧线
-  ctx.beginPath();
+  // 构造边（含控制点），动画路径与静态路径共用同一套几何，保证两态一致
+  const edges = [];
   const seenEdge = {};
-  let prev = null;
-  let started = false;
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i];
-    if (!p) { prev = null; started = false; continue; }
-    if (prev) {
-      const a = stops[i - 1].adcode;
-      const b = stops[i].adcode;
-      const key = a < b ? a + '|' + b : b + '|' + a;
-      const side = seenEdge[key] ? -1 : 1;
-      seenEdge[key] = 1;
-      const c = geoRoute.arcControl(prev[0], prev[1], p[0], p[1], 0.18, side);
-      if (!started) { ctx.moveTo(prev[0], prev[1]); started = true; }
-      ctx.quadraticCurveTo(c[0], c[1], p[0], p[1]);
-    }
-    prev = p;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    if (!a || !b) continue;
+    const ka = stops[i - 1].adcode;
+    const kb = stops[i].adcode;
+    const key = ka < kb ? ka + '|' + kb : kb + '|' + ka;
+    const side = seenEdge[key] ? -1 : 1;
+    seenEdge[key] = 1;
+    edges.push({ a: a, b: b, c: geoRoute.arcControl(a[0], a[1], b[0], b[1], 0.18, side), to: i });
   }
+
   ctx.lineWidth = dashed ? 2 : 2.4;
-  ctx.setLineDash(dashed ? [7, 6] : []);
   ctx.strokeStyle = lineColor;
-  ctx.stroke();
-  ctx.setLineDash([]);
+
+  if (progress >= 1) {
+    // 常态：单次 stroke（拖动期每帧都走这里，保持原性能）
+    ctx.beginPath();
+    let started = false;
+    for (let k = 0; k < edges.length; k++) {
+      const e = edges[k];
+      if (!started) { ctx.moveTo(e.a[0], e.a[1]); started = true; }
+      ctx.quadraticCurveTo(e.c[0], e.c[1], e.b[0], e.b[1]);
+    }
+    ctx.setLineDash(dashed ? [7, 6] : []);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  } else {
+    // 生长态：逐边采样，按累计弧长截断
+    const sampled = [];
+    let total = 0;
+    const siteAt = {};   // 站点下标 → 该站所在的累计弧长
+    if (pts.length && pts[0]) siteAt[0] = 0;
+    for (let k = 0; k < edges.length; k++) {
+      const e = edges[k];
+      const sp = sampleQuad(e.a, e.c, e.b, 18);
+      for (let j = 1; j < sp.length; j++) {
+        const d = Math.hypot(sp[j][0] - sp[j - 1][0], sp[j][1] - sp[j - 1][1]);
+        total += d;
+        sampled.push({ p: sp[j], d: d });
+      }
+      siteAt[e.to] = total;
+    }
+    const budget = total * progress;
+    ctx.beginPath();
+    let acc = 0;
+    let started = false;
+    if (edges.length && sampled.length) {
+      ctx.moveTo(edges[0].a[0], edges[0].a[1]);
+      started = true;
+    }
+    for (let k = 0; k < sampled.length; k++) {
+      const s = sampled[k];
+      if (acc >= budget) break;
+      if (acc + s.d <= budget) {
+        ctx.lineTo(s.p[0], s.p[1]);
+        acc += s.d;
+      } else {
+        const prevP = k > 0 ? sampled[k - 1].p : edges[0].a;
+        const t = s.d > 0 ? (budget - acc) / s.d : 0;
+        ctx.lineTo(prevP[0] + (s.p[0] - prevP[0]) * t, prevP[1] + (s.p[1] - prevP[1]) * t);
+        acc = budget;
+        break;
+      }
+    }
+    if (started) {
+      ctx.setLineDash([]);          // 生长中强制实线，走完才恢复虚线语义
+      ctx.stroke();
+    }
+
+    // 已通过的站点：脉冲环（刚经过 0→1 衰减，半径 7→22）
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const at = siteAt[i];
+      if (!p || at === undefined || at > budget) continue;
+      const passed = budget - at;
+      const k = Math.min(1, passed / 70);
+      if (k < 1) {
+        ctx.beginPath();
+        ctx.arc(p[0], p[1], 7 + k * 15, 0, Math.PI * 2);
+        ctx.strokeStyle = lineColor;
+        ctx.globalAlpha = (1 - k) * 0.85;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      ctx.beginPath();
+      ctx.arc(p[0], p[1], 5, 0, Math.PI * 2);
+      ctx.fillStyle = lineColor;
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
 
   // 编号节点（手势期由调用方传 withLabels=false 跳过，减少 arc + fillText）
   if (withLabels !== false) {
@@ -108,6 +199,36 @@ function paintRoute(ctx, stops, lineColor, dashed, pr, scale, tx, ty, W, H, with
       ctx.stroke();
       ctx.fillStyle = '#10131a';
       ctx.fillText(String(i + 1), p[0], p[1] + 0.5);
+    }
+  }
+}
+
+/**
+ * 5A 景点气泡（全国视图）：每个省级行政区一个圆，数字是该省 5A 数量。
+ * points 由页面按省级图层中心点构造，这里只负责投影与描画。
+ */
+function paintAttractionBubbles(ctx, points, pr, scale, tx, ty, W, H, lite) {
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    if (!p || !p.n) continue;
+    const pj = project(p.lng, p.lat);
+    const x = ((pj[0] - pr.minX) / pr.w) * scale + tx;
+    const y = ((pr.maxY - pj[1]) / pr.w) * scale + ty;
+    if (x < -20 || y < -20 || x > W + 20 || y > H + 20) continue;
+    const r = p.n >= 20 ? 11 : p.n >= 10 ? 10 : 9;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = PALETTE.attrFill;
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = PALETTE.attrRim;
+    ctx.stroke();
+    if (!lite) {
+      ctx.fillStyle = PALETTE.attrRim;
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(p.n), x, y + 0.5);
     }
   }
 }
@@ -211,9 +332,12 @@ function drawScene(ctx, s) {
   }
 
   // 6. 名称标注（省名/市名，压在填充上、足迹点之下；手势期跳过，避免每帧几十次文字 AA）
+  //    景点图层开启时气泡占住省中心，省名整体下移一行
+  const attrOn = !!(s.attractions && s.attractions.on);
   if (!lite && layer.proj && layer.regions.length) {
     const pr = layer.proj;
     const fontSize = s.level === 'country' ? 10 : 9;
+    const nameDy = attrOn && s.level === 'country' ? 14 : 0;
     ctx.font = fontSize + 'px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -223,7 +347,7 @@ function drawScene(ctx, s) {
       if (!r.centerLL || !r.name) continue;
       const pj = project(r.centerLL[0], r.centerLL[1]);
       const x = ((pj[0] - pr.minX) / pr.w) * scale + tx;
-      const y = ((pr.maxY - pj[1]) / pr.w) * scale + ty;
+      const y = ((pr.maxY - pj[1]) / pr.w) * scale + ty + nameDy;
       if (x < -40 || y < -40 || x > W + 40 || y > H + 40) continue;
       ctx.fillText(r.name, x, y);
     }
@@ -255,16 +379,29 @@ function drawScene(ctx, s) {
     }
   }
 
+  // 7.5 5A 景点图层（全国视图画省级气泡；气泡压在足迹点之上、路线之下）
+  if (attrOn && s.level === 'country' && layer.proj && s.attractions.points && s.attractions.points.length) {
+    paintAttractionBubbles(ctx, s.attractions.points, layer.proj, scale, tx, ty, W, H, lite);
+  }
+
   // 8. 路线层：已保存路线 + 新建选点预览（省级层也画，选市时能看到已选站点连线）
   if (layer.proj) {
     const pr = layer.proj;
     const sc = view.scale;
     const txv = view.tx;
     const tyv = view.ty;
+    const anim = s.routeAnim && s.routeAnim.progress < 1 ? s.routeAnim : null;
     (s.routes || []).forEach((r) => {
+      if (anim && anim.id === r.id) return;   // 动画那条留到最后画，保证在最上层
       const done = r.status === 'done';
       paintRoute(ctx, r.stops, done ? PALETTE.visitedStroke : PALETTE.accent, !done, pr, sc, txv, tyv, W, H, !lite);
     });
+    if (anim) {
+      const hot = (s.routes || []).find((r) => r.id === anim.id);
+      if (hot) {
+        paintRoute(ctx, hot.stops, PALETTE.visitedStroke, false, pr, sc, txv, tyv, W, H, false, anim);
+      }
+    }
     if (s.selectStops && s.selectStops.length > 1) {
       paintRoute(ctx, s.selectStops, PALETTE.accent, true, pr, sc, txv, tyv, W, H, !lite);
     }
@@ -332,4 +469,5 @@ function createRenderer(canvas, ctx) {
   };
 }
 
-module.exports = { PALETTE, createRenderer, drawScene, statusOf };
+// paintRoute 是纯绘制函数，一并导出：打卡生长动画的截断/脉冲逻辑可单测
+module.exports = { PALETTE, createRenderer, drawScene, statusOf, paintRoute, paintAttractionBubbles };

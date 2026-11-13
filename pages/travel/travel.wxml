@@ -123,31 +123,77 @@
       <view class="sheet-hint text-dim">{{sheet.hint}}</view>
   </view>
 
-  <!-- 路线列表弹层（与标记弹层同款结构：遮罩与弹层为兄弟节点） -->
+  <!-- 路线弹层：列表态 / 详情态共用一层（与标记弹层同款结构：遮罩与弹层为兄弟节点） -->
   <view wx:if="{{routeSheet}}" class="sheet-mask" bindtap="closeRouteSheet" catchtouchmove="noop"></view>
   <view wx:if="{{routeSheet}}" class="sheet" catchtap="noop">
-    <view class="sheet-title">路线</view>
-    <view class="sheet-sub text-dim">把去过和想去的城市连成行程</view>
-    <view class="route-new" bindtap="onCreateRoute">+ 新建路线</view>
 
-    <view class="sheet-body">
-      <view wx:if="{{routeSheet.routes.length === 0}}" class="route-empty text-dim">
-        还没有路线，点上方「新建路线」开始
-      </view>
-      <view wx:for="{{routeSheet.routes}}" wx:key="id" class="route-item">
-        <view class="route-info" bindtap="onToggleRoute" data-id="{{item.id}}">
-          <view class="route-line1">
-            <text class="route-name">{{item.name}}</text>
-            <text wx:if="{{item.hidden}}" class="route-tag">已隐藏</text>
-            <text wx:elif="{{item.status === 'done'}}" class="route-tag route-tag-done">已走完</text>
-            <text wx:else class="route-tag route-tag-plan">规划中</text>
-          </view>
-          <view class="route-path text-dim">{{item.path}}</view>
-          <view class="route-meta text-dim">{{item.count}} 城 · 直线约 {{item.km}} km · 点击{{item.hidden ? '显示' : '隐藏'}}</view>
+    <!-- 列表态 -->
+    <block wx:if="{{!routeSheet.detail}}">
+      <view class="sheet-title">路线</view>
+      <view class="sheet-sub text-dim">把去过和想去的城市连成行程</view>
+      <view class="route-new" bindtap="onCreateRoute">+ 新建路线</view>
+
+      <view class="sheet-body">
+        <view wx:if="{{routeSheet.routes.length === 0}}" class="route-empty text-dim">
+          还没有路线，点上方「新建路线」开始
         </view>
-        <view class="route-del" catchtap="onDeleteRoute" data-id="{{item.id}}">删除</view>
+        <view wx:for="{{routeSheet.routes}}" wx:key="id" class="route-item">
+          <view class="route-info" id="ri-{{item.id}}" bindtap="onOpenRouteDetail" data-id="{{item.id}}">
+            <view class="route-line1">
+              <text class="route-name">{{item.name}}</text>
+              <text wx:if="{{item.status === 'done'}}" class="route-tag route-tag-done">已走完</text>
+              <text wx:else class="route-tag route-tag-plan">规划中</text>
+              <text wx:if="{{item.hidden}}" class="route-tag route-tag-off">未显示</text>
+            </view>
+            <view class="route-path text-dim">{{item.path}}</view>
+            <view class="route-meta text-dim">{{item.count}} 城 · 直线约 {{item.km}} km</view>
+          </view>
+          <view class="route-eye {{item.hidden ? 'off' : ''}}" hover-class="route-eye-hover"
+                catchtap="onToggleRoute" data-id="{{item.id}}">{{item.hidden ? '显示' : '隐藏'}}</view>
+          <view class="route-arrow">›</view>
+        </view>
       </view>
-    </view>
+    </block>
+
+    <!-- 详情态：改名 / 调序 / 状态切换都在这 -->
+    <block wx:else>
+      <view class="rd-top">
+        <view class="rd-back" bindtap="onBackRouteList">‹ 路线</view>
+        <view class="rd-status {{routeSheet.detail.status === 'done' ? 'done' : 'plan'}}"
+              id="rd-status" hover-class="rd-status-hover" bindtap="onToggleRouteStatus">
+          <text wx:if="{{routeSheet.detail.status === 'done'}}">✓ 已走完</text>
+          <text wx:else>○ 规划中 · 打卡</text>
+        </view>
+      </view>
+
+      <view class="rd-title" bindtap="onRenameRoute">
+        <text class="rd-name">{{routeSheet.detail.name}}</text>
+        <text class="rd-edit">✎</text>
+      </view>
+      <view class="rd-meta text-dim">
+        {{routeSheet.detail.count}} 城 · 直线约 {{routeSheet.detail.km}} km · 点标题可重命名
+      </view>
+
+      <view class="sheet-body">
+        <view class="rd-stops">
+          <view wx:for="{{routeSheet.detail.stops}}" wx:key="no" class="rd-stop">
+            <text class="rd-no">{{item.no}}</text>
+            <text class="rd-stop-name">{{item.name}}</text>
+            <view class="rd-ops">
+              <view class="rd-op {{item.isFirst ? 'dis' : ''}}" id="rd-up-{{index}}"
+                    data-i="{{index}}" data-dir="-1" catchtap="onMoveStop">↑</view>
+              <view class="rd-op {{item.isLast ? 'dis' : ''}}" id="rd-down-{{index}}"
+                    data-i="{{index}}" data-dir="1" catchtap="onMoveStop">↓</view>
+              <view class="rd-op rd-op-del" id="rd-del-{{index}}" data-i="{{index}}"
+                    catchtap="onDeleteStop">×</view>
+            </view>
+          </view>
+        </view>
+        <view class="rd-tip text-dim">用 ↑ ↓ 调整先后顺序，路线里程会跟着变</view>
+      </view>
+
+      <view class="rd-del-route" bindtap="onDeleteRoute" data-id="{{routeSheet.detail.id}}">删除这条路线</view>
+    </block>
   </view>
 
   <!-- 新建路线选点条：不遮挡地图，地图可继续拖拽缩放与点选 -->

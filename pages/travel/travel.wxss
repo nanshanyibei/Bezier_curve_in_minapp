@@ -537,6 +537,180 @@
   padding: 10rpx 16rpx;
 }
 
+/* 列表右侧：显隐切换 + 进详情箭头 */
+.route-eye {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: var(--text-dim);
+  border: 1rpx solid var(--border);
+  border-radius: 999rpx;
+  padding: 6rpx 18rpx;
+}
+
+.route-eye.off {
+  opacity: 0.5;
+}
+
+.route-eye-hover {
+  background: var(--bg-card);
+}
+
+.route-arrow {
+  flex-shrink: 0;
+  font-size: 30rpx;
+  color: var(--text-dim);
+  padding-left: 4rpx;
+}
+
+.route-tag-off {
+  color: var(--text-dim);
+  background: rgba(139, 139, 150, 0.16);
+}
+
+/* ---------- 路线详情（改名 / 调序 / 状态切换） ---------- */
+.rd-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22rpx;
+}
+
+.rd-back {
+  font-size: 26rpx;
+  color: var(--accent);
+  padding: 6rpx 0;
+}
+
+.rd-status {
+  font-size: 24rpx;
+  border-radius: 999rpx;
+  padding: 10rpx 26rpx;
+  border: 1rpx solid var(--border);
+  transition: transform 0.12s ease;
+}
+
+.rd-status.plan {
+  color: var(--orange);
+  border-color: rgba(240, 179, 94, 0.5);
+  background: rgba(240, 179, 94, 0.12);
+}
+
+.rd-status.done {
+  color: var(--green);
+  border-color: rgba(126, 212, 145, 0.55);
+  background: rgba(126, 212, 145, 0.14);
+}
+
+.rd-status-hover {
+  transform: scale(0.94);
+}
+
+.rd-title {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.rd-name {
+  font-size: 38rpx;
+  font-weight: 700;
+  color: var(--text);
+  max-width: 520rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rd-edit {
+  font-size: 26rpx;
+  color: var(--text-dim);
+}
+
+.rd-meta {
+  font-size: 22rpx;
+  margin: 8rpx 0 24rpx;
+}
+
+.rd-stops {
+  margin-bottom: 6rpx;
+}
+
+.rd-stop {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 20rpx;
+  background: var(--bg-card-2);
+  border: 1rpx solid var(--border);
+  border-radius: 14rpx;
+  margin-bottom: 10rpx;
+}
+
+.rd-no {
+  flex-shrink: 0;
+  width: 40rpx;
+  height: 40rpx;
+  line-height: 40rpx;
+  text-align: center;
+  font-size: 20rpx;
+  font-weight: 600;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #16161c;
+}
+
+.rd-stop-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rd-ops {
+  display: flex;
+  gap: 8rpx;
+  flex-shrink: 0;
+}
+
+.rd-op {
+  width: 54rpx;
+  height: 54rpx;
+  line-height: 54rpx;
+  text-align: center;
+  font-size: 26rpx;
+  border-radius: 12rpx;
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
+  color: var(--text);
+}
+
+.rd-op.dis {
+  opacity: 0.26;
+}
+
+.rd-op-del {
+  color: var(--red);
+}
+
+.rd-tip {
+  font-size: 21rpx;
+  text-align: center;
+  margin-top: 10rpx;
+}
+
+.rd-del-route {
+  flex-shrink: 0;
+  margin-top: 20rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: var(--red);
+  padding: 20rpx 0;
+  border-radius: 16rpx;
+  background: rgba(239, 125, 125, 0.1);
+}
+
 /* ---------- 新建路线选点条 ---------- */
 .select-bar {
   position: absolute;

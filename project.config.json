@@ -24,6 +24,10 @@
       },
       {
         "type": "folder",
+        "value": "release"
+      },
+      {
+        "type": "folder",
         "value": ".workbuddy"
       },
       {

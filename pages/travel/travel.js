@@ -4,11 +4,13 @@ const geoGesture = require('../../utils/geoGesture');
 const travelStore = require('../../utils/travelStore');
 const routeStore = require('../../utils/routeStore');
 const memoryStore = require('../../utils/memoryStore');
+const attractionLayer = require('../../utils/attractionLayer');
 const cb = require('../../utils/cb');
 const seed = require('../../assets/data/attractions-seed');
 
 const COUNTRY = '100000';
 const ANIM_MS = 240;
+const ATTR_KEY = 'travel.attrLayer';   // 景点图层开关，默认关
 // 直辖市（仅用于弹层文案标注，可正常下钻到区）
 const MUNICIPALITIES = { 110000: 1, 120000: 1, 310000: 1, 500000: 1 };
 
@@ -25,7 +27,8 @@ Page({
     showHint: true,            // 全国视图操作提示
     sheet: null,               // { name, adcode, levelLabel, status }
     routeSheet: null,          // { routes: [{ id, name, status, hidden, count, km }] }
-    routeSelect: null          // { name, stops: [{ adcode, name, center }] } 新建路线选点态
+    routeSelect: null,         // { name, stops: [{ adcode, name, center }] } 新建路线选点态
+    attrOn: false              // 5A 景点图层（默认关，记忆上次选择）
   },
 
   // 非响应式运行时
@@ -45,6 +48,7 @@ Page({
   _sheetRegion: null,
   _provinceAdcode: '', // 省级层当前省份 adcode（区级景点查省级兜底用）
   _routes: [],         // 路线内存缓存：draw() 每帧读，绝不落回 storage
+  _routeAnim: null,    // 打卡动效态 { id, progress }，仅绘制期存在
   _useCoarse: true,    // LOD 滞回状态（true=简化环）
   _gesturing: false,   // 手势中：走降级渲染
   _gestureDrew: false, // 本次手势是否已降级重绘过（纯点击不触发补帧）
@@ -54,7 +58,11 @@ Page({
     this._marks = travelStore.getAll();
     this._routes = routeStore.visible();
     this._gs = geoGesture.createState();
-    this.setData({ stats: travelStore.stats() });
+    this._attrPoints = null;
+    this.setData({
+      stats: travelStore.stats(),
+      attrOn: wx.getStorageSync(ATTR_KEY) === 1
+    });
     // 云端标记合并（新者胜），异步不打断首屏
     travelStore.pullCloud().then((r) => {
       if (r && r.changed) {
@@ -247,6 +255,7 @@ Page({
       lite: this._gesturing,
       useCoarse: this._useCoarse,
       routes: this._routes,
+      routeAnim: this._routeAnim,
       selectStops: this.data.routeSelect ? this.data.routeSelect.stops : null
     });
   },
@@ -606,15 +615,151 @@ Page({
   // ---------- 路线 ----------
   onOpenRoutes() {
     if (this.data.routeSelect) return; // 选点中不弹列表
-    this.setData({ routeSheet: { routes: routeStore.list() } });
+    this.setData({ routeSheet: { routes: routeStore.list(), detail: null } });
   },
 
   closeRouteSheet() {
     this.setData({ routeSheet: null });
   },
 
+  /** 列表刷新：详情态下同步刷新当前详情，避免改名/调序后回列表看到旧数据 */
   refreshRouteSheet() {
-    if (this.data.routeSheet) this.setData({ 'routeSheet.routes': routeStore.list() });
+    const rs = this.data.routeSheet;
+    if (!rs) return;
+    const patch = { 'routeSheet.routes': routeStore.list() };
+    if (rs.detail) {
+      const d = routeStore.detail(rs.detail.id);
+      if (d) patch['routeSheet.detail'] = d;
+    }
+    this.setData(patch);
+  },
+
+  // ---------- 路线详情 ----------
+
+  /** 点列表项主体 → 进详情（显隐改由单独的按钮控制） */
+  onOpenRouteDetail(e) {
+    const id = e.currentTarget.dataset.id;
+    const d = routeStore.detail(id);
+    if (!d) return;
+    this.setData({ 'routeSheet.detail': d });
+  },
+
+  onBackRouteList() {
+    this.setData({ 'routeSheet.detail': null });
+    this.refreshRouteSheet();
+  },
+
+  /** 重命名：原生可编辑弹窗，取消或空名都不落库 */
+  onRenameRoute() {
+    const d = this.data.routeSheet && this.data.routeSheet.detail;
+    if (!d) return;
+    wx.showModal({
+      title: '重命名路线',
+      editable: true,
+      placeholderText: '给这条路线起个名字',
+      content: d.name,
+      confirmText: '保存',
+      success: (res) => {
+        if (!res.confirm) return;
+        const next = routeStore.rename(d.id, res.content);
+        if (!next) {
+          wx.showToast({ title: '名称不能为空', icon: 'none' });
+          return;
+        }
+        this.setData({
+          'routeSheet.detail': next,
+          'routeSheet.routes': routeStore.list()
+        });
+        wx.showToast({ title: '已重命名', icon: 'none' });
+      }
+    });
+  },
+
+  /** 站点上移 / 下移（dir: -1 上，1 下），到边界静默不动 */
+  onMoveStop(e) {
+    const d = this.data.routeSheet && this.data.routeSheet.detail;
+    if (!d) return;
+    const i = Number(e.currentTarget.dataset.i);
+    const dir = Number(e.currentTarget.dataset.dir);
+    const next = routeStore.moveStop(d.id, i, dir);
+    if (!next) return;   // 首站不能再上移，末站不能再下移
+    this.setData({
+      'routeSheet.detail': next,
+      'routeSheet.routes': routeStore.list()
+    });
+    this._syncRoutes();
+    this.draw();
+  },
+
+  /** 移除站点：少于 2 个城市时拒绝，否则路线不成线 */
+  onDeleteStop(e) {
+    const d = this.data.routeSheet && this.data.routeSheet.detail;
+    if (!d) return;
+    const i = Number(e.currentTarget.dataset.i);
+    const r = routeStore.removeStop(d.id, i);
+    if (!r.ok) {
+      if (r.reason === 'TOO_FEW') wx.showToast({ title: '至少保留 2 个城市', icon: 'none' });
+      return;
+    }
+    this.setData({
+      'routeSheet.detail': r.route,
+      'routeSheet.routes': routeStore.list()
+    });
+    this._syncRoutes();
+    this.draw();
+  },
+
+  /** 状态切换：规划中 ↔ 已走完。切到已走完即「打卡」，收起弹层看地图生长动效 */
+  onToggleRouteStatus() {
+    const d = this.data.routeSheet && this.data.routeSheet.detail;
+    if (!d) return;
+    const target = d.status === 'done' ? 'plan' : 'done';
+    const r = routeStore.setStatus(d.id, target);
+    if (!r) return;
+    this._syncRoutes();
+
+    if (r.became === 'done') {
+      // 弹层挡住地图下半部分，先收起来再画
+      this.setData({ routeSheet: null });
+      if (wx.vibrateShort) wx.vibrateShort({ type: 'medium' });
+      wx.showToast({ title: '打卡成功 · ' + r.route.km + ' km', icon: 'none' });
+      setTimeout(() => this.playRouteStamp(d.id), 180);
+    } else {
+      this.setData({
+        'routeSheet.detail': r.route,
+        'routeSheet.routes': routeStore.list()
+      });
+      this.draw();
+      wx.showToast({ title: '已改回规划中', icon: 'none' });
+    }
+  },
+
+  /**
+   * 打卡动效：线路从起点生长到终点，途经站点依次脉冲
+   * 由 canvas 的 requestAnimationFrame 驱动；结束后回落静态绘制（带回序号）
+   */
+  playRouteStamp(id) {
+    const DUR = 900;
+    const start = Date.now();
+    const tick = () => {
+      if (!this._routeAnim || this._routeAnim.id !== id) return;
+      const t = Math.min(1, (Date.now() - start) / DUR);
+      if (t >= 1) {
+        this._routeAnim = null;   // 静态路径接管最终态
+        this.draw();
+        return;
+      }
+      const eased = 1 - Math.pow(1 - t, 3);
+      this._routeAnim = { id: id, progress: eased };
+      this.draw();
+      if (this._canvas && this._canvas.requestAnimationFrame) {
+        this._canvas.requestAnimationFrame(tick);
+      } else {
+        setTimeout(tick, 16);
+      }
+    };
+    this._routeAnim = { id: id, progress: 0 };
+    tick();
   },
 
   /** 新建路线：省级视图先回全国（选点在全国层进行），再进入选点态 */
@@ -667,7 +812,7 @@ Page({
     // 从省级视图建完线后回全国，先看到完整弧线再弹列表
     if (this.data.level === 'province') this.onBack(() => this.draw());
     else this.draw();
-    this.setData({ routeSheet: { routes: routeStore.list() } });
+    this.setData({ routeSheet: { routes: routeStore.list(), detail: null } });
     wx.showToast({ title: '已保存「' + r.name + '」', icon: 'none' });
   },
 
@@ -716,7 +861,8 @@ Page({
         if (!res.confirm) return;
         routeStore.remove(id);
         this._syncRoutes();
-        this.refreshRouteSheet();
+        // 可能从详情里删的，统一退回列表
+        this.setData({ routeSheet: { routes: routeStore.list(), detail: null } });
         this.draw();
       }
     });

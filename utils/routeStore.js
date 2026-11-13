@@ -104,4 +104,99 @@ function setHidden(id, hidden) {
   return true;
 }
 
-module.exports = { KEY, getAll, visible, list, totalKm, create, remove, setHidden };
+/** 取单条路线（原始结构，含 stops） */
+function get(id) {
+  const r = loadAll().routes.find((x) => x.id === id);
+  return r || null;
+}
+
+/**
+ * 详情视图数据：站点带序号与首尾标记，附里程
+ * 站点直接引用 store 内的对象副本，页面改序后拿返回值重渲染即可
+ */
+function detail(id) {
+  const r = get(id);
+  if (!r) return null;
+  const stops = r.stops.map((s, i) => ({
+    adcode: s.adcode,
+    name: s.name || s.adcode,
+    center: s.center || null,
+    no: i + 1,
+    isFirst: i === 0,
+    isLast: i === r.stops.length - 1
+  }));
+  return {
+    id: r.id,
+    name: r.name,
+    status: r.status,
+    hidden: !!r.hidden,
+    count: r.stops.length,
+    km: totalKm(r.stops),
+    stops: stops
+  };
+}
+
+/** 重命名：空名回退为原名；限长 20 字 */
+function rename(id, name) {
+  const trimmed = String(name || '').trim().slice(0, 20);
+  if (!trimmed) return null;
+  const d = loadAll();
+  const r = d.routes.find((x) => x.id === id);
+  if (!r) return null;
+  r.name = trimmed;
+  r.updatedAt = Date.now();
+  save(d);
+  return detail(id);
+}
+
+/** 切换状态：plan ↔ done；返回 { route, became } 供页面判断是否播放打卡动效 */
+function setStatus(id, status) {
+  const next = status === 'done' ? 'done' : 'plan';
+  const d = loadAll();
+  const r = d.routes.find((x) => x.id === id);
+  if (!r) return null;
+  const became = r.status !== next ? next : '';
+  r.status = next;
+  r.updatedAt = Date.now();
+  if (next === 'done' && !r.stampedAt) r.stampedAt = Date.now(); // 首次打卡时间
+  save(d);
+  return { route: detail(id), became: became };
+}
+
+/**
+ * 站点调序：dir = -1 上移 / 1 下移
+ * 到头了返回 null（页面据此不抖）
+ */
+function moveStop(id, index, dir) {
+  const d = loadAll();
+  const r = d.routes.find((x) => x.id === id);
+  if (!r) return null;
+  const from = Number(index);
+  const to = from + (dir < 0 ? -1 : 1);
+  if (!(from >= 0 && from < r.stops.length) || to < 0 || to >= r.stops.length) return null;
+  const tmp = r.stops[from];
+  r.stops[from] = r.stops[to];
+  r.stops[to] = tmp;
+  r.updatedAt = Date.now();
+  save(d);
+  return detail(id);
+}
+
+/** 移除站点：少于 2 个站点时拒绝（路线至少要有一段） */
+function removeStop(id, index) {
+  const d = loadAll();
+  const r = d.routes.find((x) => x.id === id);
+  if (!r) return { ok: false, reason: 'NOT_FOUND' };
+  if (r.stops.length <= 2) return { ok: false, reason: 'TOO_FEW' };
+  const i = Number(index);
+  if (!(i >= 0 && i < r.stops.length)) return { ok: false, reason: 'BAD_INDEX' };
+  r.stops.splice(i, 1);
+  r.updatedAt = Date.now();
+  save(d);
+  return { ok: true, route: detail(id) };
+}
+
+module.exports = {
+  KEY, getAll, visible, list, totalKm, create, remove, setHidden,
+  get, detail, rename, setStatus, moveStop, removeStop
+};
