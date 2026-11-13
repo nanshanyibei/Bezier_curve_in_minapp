@@ -48,6 +48,16 @@
   color: var(--accent);
 }
 
+.hud .routes {
+  color: var(--accent);
+}
+
+.hint-select {
+  bottom: calc(320rpx + env(safe-area-inset-bottom));
+  background: rgba(110, 168, 254, 0.18);
+  color: var(--accent);
+}
+
 .hud .my {
   padding: 0;
   width: 68rpx;
@@ -74,39 +84,6 @@
   border-radius: 999rpx;
   padding: 8rpx 22rpx;
   pointer-events: none;
-}
-
-/* 覆盖进度 */
-.coverage {
-  position: absolute;
-  left: 24rpx;
-  right: 24rpx;
-  bottom: calc(116rpx + env(safe-area-inset-bottom));
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  pointer-events: none;
-}
-
-.cov-bar {
-  flex: 1;
-  height: 8rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-}
-
-.cov-bar-fill {
-  height: 100%;
-  border-radius: 999rpx;
-  background: linear-gradient(90deg, #7ed491, #6ea8fe);
-  transition: width 0.3s ease;
-}
-
-.cov-text {
-  font-size: 20rpx;
-  color: var(--text-dim);
-  flex-shrink: 0;
 }
 
 /* 图例 */
@@ -469,4 +446,192 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+}
+
+/* ---------- 路线列表弹层 ---------- */
+.route-new {
+  text-align: center;
+  padding: 26rpx 0;
+  font-size: 28rpx;
+  color: var(--accent);
+  background: rgba(110, 168, 254, 0.12);
+  border: 1rpx solid rgba(110, 168, 254, 0.4);
+  border-radius: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.route-empty {
+  text-align: center;
+  font-size: 24rpx;
+  padding: 40rpx 0;
+}
+
+.route-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  background: var(--bg-card-2);
+  border: 1rpx solid var(--border);
+  border-radius: 16rpx;
+  padding: 22rpx 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.route-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.route-line1 {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.route-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-tag {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  color: var(--accent);
+  background: rgba(110, 168, 254, 0.15);
+  border-radius: 999rpx;
+  padding: 2rpx 14rpx;
+}
+
+.route-tag-done {
+  color: var(--green);
+  background: rgba(126, 212, 145, 0.15);
+}
+
+.route-tag-plan {
+  color: var(--orange);
+  background: rgba(240, 179, 94, 0.15);
+}
+
+.route-meta {
+  font-size: 22rpx;
+  margin-top: 6rpx;
+}
+
+.route-path {
+  font-size: 22rpx;
+  margin-top: 6rpx;
+  color: var(--text);
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-del {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: var(--red);
+  padding: 10rpx 16rpx;
+}
+
+/* ---------- 新建路线选点条 ---------- */
+.select-bar {
+  position: absolute;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: calc(24rpx + env(safe-area-inset-bottom));
+  z-index: 50;
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
+  border-radius: 20rpx;
+  padding: 20rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.select-name {
+  height: 64rpx;
+  background: var(--bg-card-2);
+  border: 1rpx solid var(--border);
+  border-radius: 12rpx;
+  padding: 0 20rpx;
+  font-size: 26rpx;
+  color: var(--text);
+}
+
+.select-name-ph {
+  color: var(--text-dim);
+}
+
+.select-stops {
+  white-space: nowrap;
+  width: 100%;
+}
+
+.select-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  background: var(--bg-card-2);
+  border: 1rpx solid var(--border);
+  border-radius: 999rpx;
+  padding: 8rpx 18rpx;
+  margin-right: 12rpx;
+}
+
+.select-chip-idx {
+  font-size: 20rpx;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.select-chip-name {
+  font-size: 24rpx;
+  color: var(--text);
+  max-width: 200rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-chip-x {
+  font-size: 28rpx;
+  color: var(--text-dim);
+  line-height: 1;
+}
+
+.select-stops-empty {
+  font-size: 24rpx;
+  padding: 8rpx 0;
+}
+
+.select-btns {
+  display: flex;
+  gap: 16rpx;
+}
+
+.select-cancel {
+  flex: 1;
+  text-align: center;
+  border-radius: 14rpx;
+  padding: 18rpx 0;
+  font-size: 26rpx;
+  border: 1rpx solid var(--border);
+  background: var(--bg-card-2);
+  color: var(--text-dim);
+}
+
+.select-done {
+  flex: 2;
+  text-align: center;
+  border-radius: 14rpx;
+  padding: 18rpx 0;
+  font-size: 26rpx;
+  color: var(--accent);
+  background: rgba(110, 168, 254, 0.15);
+  border: 1rpx solid rgba(110, 168, 254, 0.4);
 }

@@ -4,6 +4,7 @@
  * 坐标变换在 JS 完成（不用 ctx.scale），保证 lineWidth 恒定、放大不虚。
  */
 const { project } = require('./geoMap');
+const geoRoute = require('./geoRoute');
 
 const PALETTE = {
   bg: '#16161c',                              // --bg
@@ -50,6 +51,67 @@ function statusOf(m) {
   return (m && m.status) || '';
 }
 
+/**
+ * 步骤 8：路线层（仅全国视图）
+ * - stops 缺 center 的站点跳过该段（断链续画）
+ * - 相同两端点的边（回折 A→B→A）自动翻弯曲方向，避免两段弧重合
+ * - route: { status, stops }；plan=虚线蓝、done=实线绿；节点带序号
+ */
+function paintRoute(ctx, stops, lineColor, dashed, pr, scale, tx, ty, W, H, withLabels) {
+  if (!stops || stops.length < 2) return;
+  const toXY = (ll) => {
+    const pj = project(ll[0], ll[1]);
+    return [(pj[0] - pr.minX) / pr.w * scale + tx, (pr.maxY - pj[1]) / pr.w * scale + ty];
+  };
+  const pts = stops.map((st) => (st.center ? toXY(st.center) : null));
+
+  // 弧线
+  ctx.beginPath();
+  const seenEdge = {};
+  let prev = null;
+  let started = false;
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    if (!p) { prev = null; started = false; continue; }
+    if (prev) {
+      const a = stops[i - 1].adcode;
+      const b = stops[i].adcode;
+      const key = a < b ? a + '|' + b : b + '|' + a;
+      const side = seenEdge[key] ? -1 : 1;
+      seenEdge[key] = 1;
+      const c = geoRoute.arcControl(prev[0], prev[1], p[0], p[1], 0.18, side);
+      if (!started) { ctx.moveTo(prev[0], prev[1]); started = true; }
+      ctx.quadraticCurveTo(c[0], c[1], p[0], p[1]);
+    }
+    prev = p;
+  }
+  ctx.lineWidth = dashed ? 2 : 2.4;
+  ctx.setLineDash(dashed ? [7, 6] : []);
+  ctx.strokeStyle = lineColor;
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 编号节点（手势期由调用方传 withLabels=false 跳过，减少 arc + fillText）
+  if (withLabels !== false) {
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      if (!p || p[0] < -20 || p[1] < -20 || p[0] > W + 20 || p[1] > H + 20) continue;
+      ctx.beginPath();
+      ctx.arc(p[0], p[1], 7, 0, Math.PI * 2);
+      ctx.fillStyle = lineColor;
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#10131a';
+      ctx.stroke();
+      ctx.fillStyle = '#10131a';
+      ctx.fillText(String(i + 1), p[0], p[1] + 0.5);
+    }
+  }
+}
+
 function drawScene(ctx, s) {
   const layer = s.layer;
   const view = s.view;
@@ -60,7 +122,10 @@ function drawScene(ctx, s) {
   const scale = view.scale;
   const tx = view.tx;
   const ty = view.ty;
-  const useCoarse = view.scale < view.baseScale * 1.6;
+  // 交互降级态：拖动/缩放手势期间只画主体（填充 + 细描边），跳过 casing、名称、路线序号
+  const lite = !!s.lite;
+  // LOD：lite 强制粗环；否则用页面传入的滞回结果，缺省退回旧判定
+  const useCoarse = lite ? true : (s.useCoarse !== undefined ? s.useCoarse : view.scale < view.baseScale * 1.6);
 
   // 背景
   ctx.fillStyle = PALETTE.bg;
@@ -90,14 +155,16 @@ function drawScene(ctx, s) {
     ctx.fill('evenodd');
   }
 
-  // 2. casing 暗底描边（全部区域一次性）
-  ctx.beginPath();
-  for (let i = 0; i < regions.length; i++) {
-    addRegionPath(ctx, regions[i], useCoarse, scale, tx, ty);
+  // 2. casing 暗底描边（全部区域一次性；手势期跳过——最贵的一遍全区域宽线光栅化）
+  if (!lite) {
+    ctx.beginPath();
+    for (let i = 0; i < regions.length; i++) {
+      addRegionPath(ctx, regions[i], useCoarse, scale, tx, ty);
+    }
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = PALETTE.casing;
+    ctx.stroke();
   }
-  ctx.lineWidth = 2.4;
-  ctx.strokeStyle = PALETTE.casing;
-  ctx.stroke();
 
   // 3. 按状态细描边
   for (let g = 0; g < order.length; g++) {
@@ -143,8 +210,8 @@ function drawScene(ctx, s) {
     ctx.stroke();
   }
 
-  // 6. 名称标注（省名/市名，压在填充上、足迹点之下）
-  if (layer.proj && layer.regions.length) {
+  // 6. 名称标注（省名/市名，压在填充上、足迹点之下；手势期跳过，避免每帧几十次文字 AA）
+  if (!lite && layer.proj && layer.regions.length) {
     const pr = layer.proj;
     const fontSize = s.level === 'country' ? 10 : 9;
     ctx.font = fontSize + 'px sans-serif';
@@ -187,6 +254,21 @@ function drawScene(ctx, s) {
       ctx.stroke();
     }
   }
+
+  // 8. 路线层：已保存路线 + 新建选点预览（省级层也画，选市时能看到已选站点连线）
+  if (layer.proj) {
+    const pr = layer.proj;
+    const sc = view.scale;
+    const txv = view.tx;
+    const tyv = view.ty;
+    (s.routes || []).forEach((r) => {
+      const done = r.status === 'done';
+      paintRoute(ctx, r.stops, done ? PALETTE.visitedStroke : PALETTE.accent, !done, pr, sc, txv, tyv, W, H, !lite);
+    });
+    if (s.selectStops && s.selectStops.length > 1) {
+      paintRoute(ctx, s.selectStops, PALETTE.accent, true, pr, sc, txv, tyv, W, H, !lite);
+    }
+  }
 }
 
 /**
@@ -196,6 +278,23 @@ function createRenderer(canvas, ctx) {
   let pending = false;
   let state = null;
   let destroyed = false;
+  // 单帧耗时打点：每 60 帧输出一次，用于拖动期性能对比（调试期观察，常驻开销可忽略）
+  let perf = { frames: 0, total: 0, max: 0, last: 0 };
+
+  function timedDraw(s, lite) {
+    const t0 = Date.now();
+    drawScene(ctx, s);
+    const dt = Date.now() - t0;
+    perf.frames++;
+    perf.total += dt;
+    perf.last = dt;
+    if (dt > perf.max) perf.max = dt;
+    if (perf.frames % 60 === 0) {
+      console.log('[geoPerf] avg=' + (perf.total / perf.frames).toFixed(1)
+        + 'ms max=' + perf.max + 'ms lite=' + (lite ? 1 : 0) + ' n=' + perf.frames);
+      perf = { frames: 0, total: 0, max: 0, last: dt };
+    }
+  }
 
   function schedule(fn) {
     if (canvas.requestAnimationFrame) canvas.requestAnimationFrame(fn);
@@ -211,12 +310,16 @@ function createRenderer(canvas, ctx) {
       pending = true;
       schedule(() => {
         pending = false;
-        if (!destroyed && state) drawScene(ctx, state);
+        if (!destroyed && state) timedDraw(state, state.lite);
       });
     },
     /** 立即同步绘制（动画循环用） */
     drawNow(s) {
-      if (!destroyed) drawScene(ctx, s);
+      if (!destroyed) timedDraw(s, s && s.lite);
+    },
+    /** 最近一批打点数据（调试用） */
+    perf() {
+      return perf;
     },
     resize(W, H, dpr) {
       canvas.width = W * dpr;

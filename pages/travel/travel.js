@@ -2,6 +2,7 @@ const geoMap = require('../../utils/geoMap');
 const geoRender = require('../../utils/geoRender');
 const geoGesture = require('../../utils/geoGesture');
 const travelStore = require('../../utils/travelStore');
+const routeStore = require('../../utils/routeStore');
 const memoryStore = require('../../utils/memoryStore');
 const cb = require('../../utils/cb');
 const seed = require('../../assets/data/attractions-seed');
@@ -16,14 +17,15 @@ Page({
     level: 'country',          // 'country' | 'province'
     currentName: '中国',
     stats: { visited: 0, want: 0 },
-    cov: { provinceVisited: 0, provinceTotal: 34, pct: 0, cityVisited: 0 },
     filter: 'all',             // all | visited | want，图例即筛选器
     loading: false,
     progress: 0,
     loadingText: '',
     error: '',
     showHint: true,            // 全国视图操作提示
-    sheet: null                // { name, adcode, levelLabel, status }
+    sheet: null,               // { name, adcode, levelLabel, status }
+    routeSheet: null,          // { routes: [{ id, name, status, hidden, count, km }] }
+    routeSelect: null          // { name, stops: [{ adcode, name, center }] } 新建路线选点态
   },
 
   // 非响应式运行时
@@ -42,16 +44,22 @@ Page({
   _domainWarned: false,
   _sheetRegion: null,
   _provinceAdcode: '', // 省级层当前省份 adcode（区级景点查省级兜底用）
+  _routes: [],         // 路线内存缓存：draw() 每帧读，绝不落回 storage
+  _useCoarse: true,    // LOD 滞回状态（true=简化环）
+  _gesturing: false,   // 手势中：走降级渲染
+  _gestureDrew: false, // 本次手势是否已降级重绘过（纯点击不触发补帧）
+  _liteTimer: null,    // 松手后补精细帧的定时器
 
   onLoad() {
     this._marks = travelStore.getAll();
+    this._routes = routeStore.visible();
     this._gs = geoGesture.createState();
-    this.setData({ stats: travelStore.stats(), cov: travelStore.coverage() });
+    this.setData({ stats: travelStore.stats() });
     // 云端标记合并（新者胜），异步不打断首屏
     travelStore.pullCloud().then((r) => {
       if (r && r.changed) {
         this._marks = r.marks;
-        this.setData({ stats: travelStore.stats(), cov: travelStore.coverage() });
+        this.setData({ stats: travelStore.stats() });
         this.draw();
       }
     });
@@ -62,22 +70,49 @@ Page({
   },
 
   onShow() {
+    // 显隐可能在别处改过，回来时刷一次内存缓存
+    this._syncRoutes();
     // iOS 切走再切回时 canvas 位图可能被系统回收，立即重绘避免空白一帧
     if (this._renderer) this.draw();
     // 从足迹清单返回时带定位请求
-    this.setData({ cov: travelStore.coverage() });
     this.applyPendingFocus();
   },
 
   onHide() {
     geoGesture.cancel(this._gs);
     this._animToken++;
+    this._resetGesture();
   },
 
   onUnload() {
     geoGesture.cancel(this._gs);
     this._animToken++;
+    this._resetGesture();
     if (this._renderer) this._renderer.destroy();
+  },
+
+  /** 刷新路线内存缓存（路线增删/显隐后调用） */
+  _syncRoutes() {
+    this._routes = routeStore.visible();
+  },
+
+  /** 手势结束：清降级态 + 取消补帧定时器 */
+  _resetGesture() {
+    this._gesturing = false;
+    this._gestureDrew = false;
+    if (this._liteTimer) {
+      clearTimeout(this._liteTimer);
+      this._liteTimer = null;
+    }
+  },
+
+  /** LOD 滞回：≥1.6x 进精细环，<1.3x 退回简化环，消除临界抖动 */
+  _updateLod() {
+    const v = this._view;
+    if (!v || !v.baseScale) return;
+    const r = v.scale / v.baseScale;
+    if (this._useCoarse && r >= 1.6) this._useCoarse = false;
+    else if (!this._useCoarse && r < 1.3) this._useCoarse = true;
   },
 
   // ---------- 初始化 ----------
@@ -208,7 +243,11 @@ Page({
       H: this._H,
       marks: this._marks,
       level: this.data.level,
-      filter: this.data.filter
+      filter: this.data.filter,
+      lite: this._gesturing,
+      useCoarse: this._useCoarse,
+      routes: this._routes,
+      selectStops: this.data.routeSelect ? this.data.routeSelect.stops : null
     });
   },
 
@@ -216,25 +255,57 @@ Page({
   onTouchStart(e) {
     if (!this._view) return;
     this._animToken++; // 打断切层动画
+    if (this._liteTimer) {
+      clearTimeout(this._liteTimer);
+      this._liteTimer = null;
+    }
+    // 不在此处重绘：纯点击不应闪一帧无名称地图，首次 move 才降级绘制
+    this._gesturing = true;
+    this._gestureDrew = false;
     geoGesture.begin(this._gs, e.touches);
   },
 
   onTouchMove(e) {
     if (!this._view) return;
-    this._view = geoGesture.move(this._gs, e.touches, this._view, geoMap);
-    this._view = geoMap.clampView(this._view, this._W, this._H, 48);
-    this._view._layerBBox = this._layer.bbox;
-    this.draw();
+    const old = this._view;
+    let v = geoGesture.move(this._gs, e.touches, this._view, geoMap);
+    v = geoMap.clampView(v, this._W, this._H, 48);
+    v._layerBBox = this._layer.bbox;
+    this._view = v;
+    this._updateLod();
+    if (!sameView(old, v)) {
+      this._gestureDrew = true;
+      this.draw(); // 视图无变化（如手指未动）不重绘
+    }
   },
 
   onTouchEnd(e) {
     if (!this._view) return;
     const r = geoGesture.end(this._gs, e.touches);
+    const drew = this._gestureDrew;
+    this._gesturing = false;
+    this._gestureDrew = false;
+    // 有过降级绘制才补精细帧（名称/描边回来）；纯点击不重绘
+    if (drew) {
+      this._liteTimer = setTimeout(() => {
+        this._liteTimer = null;
+        this.draw();
+      }, 120);
+    }
     if (r.gesture === 'tap') this.handleTap(r.x, r.y);
   },
 
   onTouchCancel() {
     geoGesture.cancel(this._gs);
+    const drew = this._gestureDrew;
+    this._gesturing = false;
+    this._gestureDrew = false;
+    if (this._liteTimer) clearTimeout(this._liteTimer);
+    if (!drew) return;
+    this._liteTimer = setTimeout(() => {
+      this._liteTimer = null;
+      this.draw();
+    }, 120);
   },
 
   // ---------- 点选 ----------
@@ -242,12 +313,52 @@ Page({
     const wpt = geoMap.screenToWorld(this._view, x, y);
     const region = geoMap.hitTest(this._layer, wpt[0], wpt[1]);
     if (!region) return;
+    // 路线选点模式：全国层点省份=下钻选市；省级层点城市=加入/移除站点
+    if (this.data.routeSelect) {
+      if (this.data.level === 'country') {
+        if (this.data.loading) return;
+        this.drillTo(region, null, () => this.addStop(region));
+        return;
+      }
+      this.addStop(region);
+      return;
+    }
     // 全国层单击=标记省份/直辖市；省级层单击=标记城市
     this.openSheet(region);
   },
 
+  /** 选点态：站点加入/移除（centerLL 缺失时用归一化中心反算经纬度兜底） */
+  addStop(region) {
+    const sel = this.data.routeSelect;
+    if (!sel) return;
+    const stops = sel.stops.slice();
+    const idx = stops.findIndex((s) => s.adcode === region.adcode);
+    if (idx >= 0) {
+      stops.splice(idx, 1);
+    } else {
+      const center = region.centerLL || this.centerLLOf(region);
+      if (!center) {
+        wx.showToast({ title: '该区域缺少中心点', icon: 'none' });
+        return;
+      }
+      stops.push({ adcode: region.adcode, name: region.name, center: center });
+    }
+    this.setData({ 'routeSelect.stops': stops });
+    this.draw();
+  },
+
+  /** 归一化中心 → 经纬度（Web Mercator 反算） */
+  centerLLOf(region) {
+    const pr = this._layer && this._layer.proj;
+    if (!pr || !region.center) return null;
+    const x = region.center[0] * pr.w + pr.minX;
+    const y = pr.maxY - region.center[1] * pr.w;
+    return [x * 180 / Math.PI, (2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180 / Math.PI];
+  },
+
   // ---------- 下钻 / 返回 ----------
-  drillTo(region, done) {
+  /** 下钻到省级层；onFail 用于选点态（无下级数据时以省级自身成站），缺省回退标记弹层 */
+  drillTo(region, done, onFail) {
     if (this.data.loading) return;
     this.setData({ loading: true, progress: 0, loadingText: '正在加载' + region.name + '…', showHint: false });
     this._provinceAdcode = region.adcode;
@@ -278,7 +389,11 @@ Page({
           showCancel: false
         });
       }
-      // 台湾/港澳无下级数据或网络不可用：省级直接标记
+      // 台湾/港澳无下级数据或网络不可用：选点态以省级自身成站，否则省级直接标记
+      if (typeof onFail === 'function') {
+        onFail();
+        return;
+      }
       this.openSheet(region);
     });
   },
@@ -316,6 +431,7 @@ Page({
         _layerBBox: this._layer.bbox
       };
       if (t < 1) {
+        this._updateLod();
         this.draw();
         if (this._canvas.requestAnimationFrame) {
           this._canvas.requestAnimationFrame(step);
@@ -468,6 +584,124 @@ Page({
 
   noop() {},
 
+  // ---------- 路线 ----------
+  onOpenRoutes() {
+    if (this.data.routeSelect) return; // 选点中不弹列表
+    this.setData({ routeSheet: { routes: routeStore.list() } });
+  },
+
+  closeRouteSheet() {
+    this.setData({ routeSheet: null });
+  },
+
+  refreshRouteSheet() {
+    if (this.data.routeSheet) this.setData({ 'routeSheet.routes': routeStore.list() });
+  },
+
+  /** 新建路线：省级视图先回全国（选点在全国层进行），再进入选点态 */
+  onCreateRoute() {
+    if (this.data.routeSelect) return;
+    this.setData({ routeSheet: null });
+    const start = () => {
+      const d = new Date();
+      const p = (n) => (n < 10 ? '0' + n : '' + n);
+      this.setData({
+        routeSelect: {
+          name: '路线 ' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()),
+          stops: []
+        }
+      });
+      this.draw();
+    };
+    if (this.data.level === 'province') this.onBack(start);
+    else start();
+  },
+
+  onRouteName(e) {
+    if (!this.data.routeSelect) return;
+    this.setData({ 'routeSelect.name': e.detail.value });
+  },
+
+  /** 选点条上移除站点（×） */
+  onRemoveStop(e) {
+    if (!this.data.routeSelect) return;
+    const i = Number(e.currentTarget.dataset.i);
+    const stops = this.data.routeSelect.stops.slice();
+    if (i >= 0 && i < stops.length) {
+      stops.splice(i, 1);
+      this.setData({ 'routeSelect.stops': stops });
+      this.draw();
+    }
+  },
+
+  onFinishRoute() {
+    const sel = this.data.routeSelect;
+    if (!sel) return;
+    if (sel.stops.length < 2) {
+      wx.showToast({ title: '至少点选 2 个城市', icon: 'none' });
+      return;
+    }
+    const r = routeStore.create(sel.name, sel.stops);
+    this.setData({ routeSelect: null });
+    this._syncRoutes();
+    // 从省级视图建完线后回全国，先看到完整弧线再弹列表
+    if (this.data.level === 'province') this.onBack(() => this.draw());
+    else this.draw();
+    this.setData({ routeSheet: { routes: routeStore.list() } });
+    wx.showToast({ title: '已保存「' + r.name + '」', icon: 'none' });
+  },
+
+  onCancelRoute() {
+    const sel = this.data.routeSelect;
+    if (!sel) return;
+    const quit = () => {
+      this.setData({ routeSelect: null });
+      this.draw();
+    };
+    if (sel.stops.length) {
+      wx.showModal({
+        title: '放弃新建路线？',
+        content: '已选的 ' + sel.stops.length + ' 个城市不会被保存',
+        confirmText: '放弃',
+        cancelText: '继续选',
+        success: (res) => { if (res.confirm) quit(); }
+      });
+    } else {
+      quit();
+    }
+  },
+
+  /** 列表项：切换地图显隐 */
+  onToggleRoute(e) {
+    const id = e.currentTarget.dataset.id;
+    const item = routeStore.list().find((r) => r.id === id);
+    if (!item) return;
+    routeStore.setHidden(id, !item.hidden);
+    this._syncRoutes();
+    this.refreshRouteSheet();
+    this.draw();
+  },
+
+  /** 列表项：删除（二次确认） */
+  onDeleteRoute(e) {
+    const id = e.currentTarget.dataset.id;
+    const item = routeStore.list().find((r) => r.id === id);
+    if (!item) return;
+    wx.showModal({
+      title: '删除路线',
+      content: '「' + item.name + '」将被删除，不可恢复',
+      confirmText: '删除',
+      confirmColor: '#ef7d7d',
+      success: (res) => {
+        if (!res.confirm) return;
+        routeStore.remove(id);
+        this._syncRoutes();
+        this.refreshRouteSheet();
+        this.draw();
+      }
+    });
+  },
+
   onPickStatus(e) {
     const status = e.currentTarget.dataset.status || '';
     if (!this.data.sheet) return;
@@ -476,7 +710,12 @@ Page({
     const center = this.data.sheet.centerLL;
     this.closeSheet();
     this._marks = travelStore.set(adcode, status, { name: name, center: center });
-    this.setData({ stats: travelStore.stats(), cov: travelStore.coverage() });
+    this.setData({ stats: travelStore.stats() });
     this.draw();
   }
 });
+
+/** scale/tx/ty 三元组完全一致视为视图无变化（手指未动时跳过重绘） */
+function sameView(a, b) {
+  return a.scale === b.scale && a.tx === b.tx && a.ty === b.ty;
+}

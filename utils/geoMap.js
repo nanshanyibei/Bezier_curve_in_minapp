@@ -231,22 +231,26 @@ function pointInRing(flat, x, y) {
   return inside;
 }
 
-/** evenodd 语义：外环内且不在洞内 = 命中（逐环异或） */
-function pointInRegion(region, x, y) {
+/** evenodd 语义：外环内且不在洞内 = 命中（逐环异或）；useCoarse 时用简化环快筛 */
+function pointInRegion(region, x, y, useCoarse) {
   const bb = region.bbox;
   if (x < bb[0] || x > bb[2] || y < bb[1] || y > bb[3]) return false;
+  const rings = (useCoarse && region.ringsCoarse) ? region.ringsCoarse : region.rings;
   let inside = false;
-  for (let i = 0; i < region.rings.length; i++) {
-    const inRing = pointInRing(region.rings[i], x, y);
+  for (let i = 0; i < rings.length; i++) {
+    const inRing = pointInRing(rings[i], x, y);
     if (inRing) inside = !inside;
   }
   return inside;
 }
 
-/** regions 已按 area 升序，命中即返回 */
+/** regions 已按 area 升序，命中即返回；粗环快筛未命中再用 full 环兜底（防高倍缩放边界漏检） */
 function hitTest(layer, x, y) {
   for (let i = 0; i < layer.regions.length; i++) {
-    if (pointInRegion(layer.regions[i], x, y)) return layer.regions[i];
+    if (pointInRegion(layer.regions[i], x, y, true)) return layer.regions[i];
+  }
+  for (let i = 0; i < layer.regions.length; i++) {
+    if (pointInRegion(layer.regions[i], x, y, false)) return layer.regions[i];
   }
   return null;
 }

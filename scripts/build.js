@@ -20,7 +20,7 @@ const ROOT = path.resolve(__dirname, '..');
 const OUT = path.join(ROOT, 'dist', 'prod');
 
 /** 顶层拷贝白名单 */
-const TOP_ENTRIES = ['app.js', 'app.json', 'app.wxss', 'config.js', 'sitemap.json', 'pages', 'utils', 'assets'];
+const TOP_ENTRIES = ['app.js', 'app.json', 'app.wxss', 'config.js', 'sitemap.json', 'pages', 'utils', 'assets', 'subpackages'];
 
 /** 生产包剔除的页面目录（相对 pages/） */
 const DROP_PAGES = [];
