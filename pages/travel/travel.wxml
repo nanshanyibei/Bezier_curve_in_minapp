@@ -71,50 +71,53 @@
         <text class="sheet-drill-arrow">›</text>
       </view>
 
-      <!-- 我的回忆（排在景点推荐之前：我经历了什么 > 这里有什么可看） -->
-      <view class="mems">
-        <view class="mems-head">
-          <text class="mems-title">我的回忆</text>
-          <text wx:if="{{sheet.memCount}}" class="mems-count text-dim">{{sheet.memCount}} 条 · {{sheet.memPhotos}} 张</text>
-        </view>
-
-        <view wx:if="{{sheet.memCount}}" class="mems-body" bindtap="onOpenMemory">
-          <view class="mems-thumbs">
-            <image wx:for="{{sheet.memThumbs}}" wx:key="*this" src="{{item}}" mode="aspectFill" class="mems-thumb" />
+      <!-- 可滚动区：回忆 + 推荐（弹层限高 85%，超出在此滚动） -->
+      <scroll-view scroll-y class="sheet-scroll" enhanced show-scrollbar="{{false}}">
+        <!-- 我的回忆（排在景点推荐之前：我经历了什么 > 这里有什么可看） -->
+        <view class="mems">
+          <view class="mems-head">
+            <text class="mems-title">我的回忆</text>
+            <text wx:if="{{sheet.memCount}}" class="mems-count text-dim">{{sheet.memCount}} 条 · {{sheet.memPhotos}} 张</text>
           </view>
-          <view class="mems-go">查看全部<text class="mems-arrow">›</text></view>
-        </view>
 
-        <view wx:else class="mems-empty" bindtap="onOpenMemory">
-          <text class="mems-plus">+</text>
-          <text class="mems-empty-text">{{sheet.status === 'want' ? '为这趟计划写点期待' : '写下这次旅行'}}</text>
-        </view>
-      </view>
-
-      <!-- 当地景点推荐 -->
-      <view class="spots">
-        <view class="spots-head">
-          <text class="spots-title">当地推荐</text>
-          <!-- @dev:begin -->
-          <text class="spots-more {{sheet.spotsLoading ? 'loading' : ''}}"
-                bindtap="onGenAttractions">{{sheet.spotsLoading ? '生成中…' : 'AI 补充'}}</text>
-          <!-- @dev:end -->
-        </view>
-        <view wx:if="{{!sheet.spotsLoading && sheet.spots.length === 0}}" class="spots-empty text-dim">
-          暂无推荐
-        </view>
-        <view wx:for="{{sheet.spots}}" wx:key="name" class="spot">
-          <image wx:if="{{item.img}}" class="spot-img" src="{{item.img}}" mode="aspectFill" />
-          <view wx:else class="spot-img spot-img-ph">{{item.name[0]}}</view>
-          <view class="spot-body">
-            <view class="spot-line1">
-              <text class="spot-name">{{item.name}}</text>
-              <text class="spot-season">{{item.bestMonths || '四季皆宜'}}</text>
+          <view wx:if="{{sheet.memCount}}" class="mems-body" bindtap="onOpenMemory">
+            <view class="mems-thumbs">
+              <image wx:for="{{sheet.memThumbs}}" wx:key="*this" src="{{item}}" mode="aspectFill" class="mems-thumb" />
             </view>
-            <view class="spot-desc text-dim">{{item.desc}}</view>
+            <view class="mems-go">查看全部<text class="mems-arrow">›</text></view>
+          </view>
+
+          <view wx:else class="mems-empty" bindtap="onOpenMemory">
+            <text class="mems-plus">+</text>
+            <text class="mems-empty-text">{{sheet.status === 'want' ? '为这趟计划写点期待' : '写下这次旅行'}}</text>
           </view>
         </view>
-      </view>
+
+        <!-- 当地景点推荐 -->
+        <view class="spots">
+          <view class="spots-head">
+            <text class="spots-title">当地推荐</text>
+            <!-- @dev:begin -->
+            <text class="spots-more {{sheet.spotsLoading ? 'loading' : ''}}"
+                  bindtap="onGenAttractions">{{sheet.spotsLoading ? '生成中…' : 'AI 补充'}}</text>
+            <!-- @dev:end -->
+          </view>
+          <view wx:if="{{!sheet.spotsLoading && sheet.spots.length === 0}}" class="spots-empty text-dim">
+            暂无推荐
+          </view>
+          <view wx:for="{{sheet.spots}}" wx:key="name" class="spot">
+            <image wx:if="{{item.img}}" class="spot-img" src="{{item.img}}" mode="aspectFill" />
+            <view wx:else class="spot-img spot-img-ph">{{item.name[0]}}</view>
+            <view class="spot-body">
+              <view class="spot-line1">
+                <text class="spot-name">{{item.name}}</text>
+                <text class="spot-season">{{item.bestMonths || '四季皆宜'}}</text>
+              </view>
+              <view class="spot-desc text-dim">{{item.desc}}</view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
 
       <view class="sheet-hint text-dim">{{sheet.hint}}</view>
     </view>
