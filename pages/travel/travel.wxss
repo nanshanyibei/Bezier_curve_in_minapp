@@ -48,6 +48,20 @@
   color: var(--accent);
 }
 
+.hud .my {
+  padding: 0;
+  width: 68rpx;
+  height: 68rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud .my-icon {
+  width: 40rpx;
+  height: 40rpx;
+}
+
 /* 操作提示 */
 .hint {
   position: absolute;

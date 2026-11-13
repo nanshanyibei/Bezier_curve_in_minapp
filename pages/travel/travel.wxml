@@ -11,7 +11,9 @@
     <view wx:if="{{level === 'province'}}" class="chip back" bindtap="onBack">‹ 全国</view>
     <view class="chip title">{{currentName}}</view>
     <view class="chip list" bindtap="onOpenList">清单</view>
-    <view class="chip list" bindtap="onOpenMy">我的</view>
+    <view class="chip my" bindtap="onOpenMy">
+      <image class="my-icon" src="/assets/tab/my.png" mode="aspectFit" />
+    </view>
   </view>
 
   <!-- 操作提示 -->
