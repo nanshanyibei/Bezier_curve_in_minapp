@@ -199,12 +199,14 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
   z-index: 99;
-  display: flex;
-  align-items: flex-end;
 }
 
 .sheet {
-  width: 100%;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
   max-height: 85vh;
   background: var(--bg-card);
   border-radius: 28rpx 28rpx 0 0;
@@ -215,17 +217,14 @@
   overflow: hidden;
 }
 
-/* 可滚动区外层：吃掉剩余高度并裁剪（普通 view 的 flex 高度在真机上可靠，
-   scroll-view 直接 flex 拿高度会失效导致不滚动、内容溢出到兄弟节点上） */
+/* 可滚动区：吃掉剩余高度并用 CSS 原生滚动。
+   不用 scroll-view —— 真机上它在 max-height 弹层内高度推导不可靠；
+   普通 view 的 overflow-y:auto 是浏览器原生行为，真机最可靠 */
 .sheet-body {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-}
-
-/* scroll-view 拿父容器的确定高度才会滚动 */
-.sheet-scroll {
-  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sheet-title {

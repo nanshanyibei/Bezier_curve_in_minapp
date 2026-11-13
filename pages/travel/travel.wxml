@@ -51,31 +51,34 @@
   <view class="error-tip" wx:if="{{error}}" bindtap="onRetry">{{error}}</view>
 
   <!-- 标记弹层 -->
-  <view wx:if="{{sheet}}" class="sheet-mask" bindtap="closeSheet" catchtouchmove="noop">
-    <view class="sheet" catchtap="noop">
-      <view class="sheet-title">
-        <text>{{sheet.name}}</text>
-        <text wx:if="{{sheet.status === 'want'}}" class="plan-tag">计划</text>
-      </view>
-      <view class="sheet-sub text-dim">{{sheet.levelLabel}} · {{sheet.adcode}}</view>
-      <view class="sheet-btns">
-        <view class="sheet-btn s-visited-btn {{sheet.status === 'visited' ? 'on' : ''}}"
-              data-status="visited" bindtap="onPickStatus">去过</view>
-        <view class="sheet-btn s-want-btn {{sheet.status === 'want' ? 'on' : ''}}"
-              data-status="want" bindtap="onPickStatus">想去</view>
-        <view class="sheet-btn s-clear-btn {{!sheet.status ? 'on' : ''}}"
-              data-status="" bindtap="onPickStatus">清除</view>
-      </view>
-      <view class="sheet-drill" wx:if="{{sheet.canDrill}}" bindtap="onDrill">
-        <text>查看市界</text>
-        <text class="sheet-drill-arrow">›</text>
-      </view>
+  <!-- 遮罩与弹层为兄弟节点：滚动区上方不能有 catchtouchmove 祖先，
+       真机（尤其 iOS）上祖先 catch 拦截会卡死内部滚动 -->
+  <view wx:if="{{sheet}}" class="sheet-mask" bindtap="closeSheet" catchtouchmove="noop"></view>
+  <view wx:if="{{sheet}}" class="sheet" catchtap="noop">
+    <view class="sheet-title">
+      <text>{{sheet.name}}</text>
+      <text wx:if="{{sheet.status === 'want'}}" class="plan-tag">计划</text>
+    </view>
+    <view class="sheet-sub text-dim">{{sheet.levelLabel}} · {{sheet.adcode}}</view>
+    <view class="sheet-btns">
+      <view class="sheet-btn s-visited-btn {{sheet.status === 'visited' ? 'on' : ''}}"
+            data-status="visited" bindtap="onPickStatus">去过</view>
+      <view class="sheet-btn s-want-btn {{sheet.status === 'want' ? 'on' : ''}}"
+            data-status="want" bindtap="onPickStatus">想去</view>
+      <view class="sheet-btn s-clear-btn {{!sheet.status ? 'on' : ''}}"
+            data-status="" bindtap="onPickStatus">清除</view>
+    </view>
+    <view class="sheet-drill" wx:if="{{sheet.canDrill}}" bindtap="onDrill">
+      <text>查看市界</text>
+      <text class="sheet-drill-arrow">›</text>
+    </view>
 
-      <!-- 可滚动区：回忆 + 推荐（弹层限高 85%，超出在此滚动） -->
-      <view class="sheet-body">
-        <scroll-view scroll-y class="sheet-scroll" enhanced show-scrollbar="{{false}}">
-        <!-- 我的回忆（排在景点推荐之前：我经历了什么 > 这里有什么可看） -->
-        <view class="mems">
+    <!-- 可滚动区：回忆 + 推荐（弹层限高 85%，超出在此滚动）。
+         用普通 view + CSS 滚动，不用 scroll-view：真机上 scroll-view 在
+         max-height 弹层内高度推导不可靠，普通 div 是浏览器原生行为 -->
+    <view class="sheet-body">
+      <!-- 我的回忆（排在景点推荐之前：我经历了什么 > 这里有什么可看） -->
+      <view class="mems">
           <view class="mems-head">
             <text class="mems-title">我的回忆</text>
             <text wx:if="{{sheet.memCount}}" class="mems-count text-dim">{{sheet.memCount}} 条 · {{sheet.memPhotos}} 张</text>
@@ -118,10 +121,8 @@
             </view>
           </view>
         </view>
-        </scroll-view>
       </view>
 
       <view class="sheet-hint text-dim">{{sheet.hint}}</view>
-    </view>
   </view>
 </view>
