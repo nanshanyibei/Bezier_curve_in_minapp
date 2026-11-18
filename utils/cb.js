@@ -1,200 +1,96 @@
 /**
- * CloudBase 接入层（HTTP 网关云函数 + @cloudbase/js-sdk 只读景点）
+ * 微信云开发接入层（wx.cloud 直连，2026-11 迁移版）
  *
- * 为什么不直连数据库 / 不用 callFunction：
- *   1. 本环境未真正开通「微信小程序登录」provider 通道（provider/token 恒返回 404），
- *      auth.signInWithOpenId() 不可用；
- *   2. createTicket 必须有私钥文件，云函数环境身份不够（Cannot destructure 'env_id'），
- *      而管理端生成的私钥不向调用方返回明文；
- *   3. SDK 的 callFunction 走 /v1/functions/...，匿名身份被拒
- *      （EXCEED_AUTHORITY: Request exceeds granted authority），客户端拿不到结果。
- *   → 私有数据（marks / diaries / chats）一律走 HTTP 网关上的 wxauth（公网路由，自带 HMAC 鉴权）；
- *     attractions 是公开只读集合，用 js-sdk 匿名态直连（ADMINWRITE 允许读）。
+ * 旧架构（腾讯云 CloudBase HTTP 网关 + wxauth HMAC 鉴权）废弃原因见 docs/migrate-to-wxcloud.md。
+ * 新架构全部走微信内部通道，免域名免备案：
+ *   1. 数据库：wx.cloud.database() 客户端直查，默认权限「仅创建者可读写」自动按 _openid 隔离；
+ *   2. 景点：attractions 集合权限设为「所有用户可读」，客户端直查；
+ *   3. 云存储：uploadFile / getTempFileURL / deleteFile，不再走 base64 网关；
+ *   4. 景点生成：wx.cloud.callFunction('genAttraction')，LLM key 只在云函数环境变量。
  *
- * 身份：openid（云函数用 AppSecret 换，稳定）。删小程序/换手机后 wx.login 静默重登，openid 不变 → 数据自动认回。
- * 安全：openid 只在服务端出现，客户端只持有 HMAC 签名 token（30 天）；每条文档 owner 由服务端强制写入。
- *
- * 降级：网关未配置 / 登录失败 → 业务层走本地 storage。
+ * 身份：_openid 由云开发自动注入，同 appid 下稳定。旧环境 owner 字段由导入脚本映射到新 openid。
+ * 兼容：16 个对外方法名与签名保持不变，页面层零改动。
  */
 const config = require('../config');
 
-const USER_KEY_STORAGE = 'travel.userKey'; // v1 设备维度身份，仅迁移/兜底
-const OPENID_STORAGE = 'cb.openid';
-const TOKEN_STORAGE = 'cb.token';
+const USER_KEY_STORAGE = 'travel.userKey'; // v1 设备维度身份，仅兜底
 const MARKS_LIMIT = 100;
-// 与服务端 wxauth 的上限保持一致：base64 超过 2MB 由网关/云函数直接拒绝
-const UPLOAD_MAX_BASE64 = 2 * 1024 * 1024;
-const GATEWAY_BASE = config.CLOUD_GATEWAY_BASE || '';
-const GW = { gateway: true }; // SDK 不可用但网关可用时 ready() 的占位返回值（truthy）
+// 客户端单次 get 上限 20 条（云开发客户端侧硬限制），列表拉取分页绕过
+const PAGE_SIZE = 20;
 
-let _app = null;
-let _auth = null;
+let _inited = false;
 let _readyPromise = null;
-let _identityKey = '';
-let _openid = '';
-let _token = '';
 let _loginInfo = { logged: false, mode: 'none', uid: '', raw: null };
-
-function sdkAvailable() {
-  try {
-    require('@cloudbase/js-sdk');
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
+let _openid = '';
 
 function envConfigured() {
-  return config.CLOUDBASE_ENV && config.CLOUDBASE_ENV !== 'YOUR_ENV_ID';
+  return config.WX_CLOUD_ENV && config.WX_CLOUD_ENV !== 'YOUR_ENV_ID';
 }
 
-/** 身份指纹：只留字母数字，限长 */
-function toKey(raw) {
-  const s = String(raw || '').replace(/[^A-Za-z0-9]/g, '');
-  return s ? s.slice(0, 32) : '';
+/** 兼容旧导出：SDK 可用性即环境是否配置（wx.cloud 基础库自带，无需 npm 依赖） */
+function sdkAvailable() {
+  return envConfigured();
 }
 
-function wxLoginCode() {
-  return new Promise((resolve, reject) => {
-    wx.login({
-      success: (r) => (r && r.code ? resolve(r.code) : reject(new Error('wx.login 未返回 code'))),
-      fail: (e) => reject(new Error((e && e.errMsg) || 'wx.login 失败'))
-    });
+function initCloud() {
+  if (_inited || !envConfigured()) return;
+  wx.cloud.init({
+    env: config.WX_CLOUD_ENV,
+    traceUser: true
   });
-}
-
-/** 网关是否可用（与 cloudbase SDK 解耦，SDK 挂了也能同步数据） */
-function gwReady() {
-  return !!GATEWAY_BASE;
-}
-
-/**
- * 调 HTTP 网关上的云函数：POST {fnName}，body 即 event
- * 返回 Promise<result 对象|null>；网络失败 resolve null（业务层降级）
- */
-function gwRequest(fnName, payload, timeoutMs) {
-  if (!GATEWAY_BASE) return Promise.resolve(null);
-  return new Promise((resolve) => {
-    wx.request({
-      url: GATEWAY_BASE + '/' + fnName,
-      method: 'POST',
-      header: { 'content-type': 'application/json' },
-      data: payload || {},
-      timeout: timeoutMs || 15000,
-      success: (res) => {
-        let body = res && res.data;
-        if (typeof body === 'string') {
-          try { body = JSON.parse(body); } catch (e) { body = null; }
-        }
-        if (!body || typeof body !== 'object') {
-          console.error('[cb] 网关响应异常:', fnName, res && res.statusCode, String(res && res.data).slice(0, 120));
-          return resolve(null);
-        }
-        resolve(body);
-      },
-      fail: (err) => {
-        console.error('[cb] 网关调用失败:', fnName, (err && err.errMsg) || err);
-        resolve(null);
-      }
-    });
-  });
-}
-
-/** 调 wxauth 网关 */
-function callApi(action, payload, timeoutMs) {
-  const data = Object.assign({ action: action, token: _token }, payload || {});
-  return gwRequest('wxauth', data, timeoutMs);
-}
-
-/** wx.login → 云函数换 openid / token */
-function loginByWx() {
-  return wxLoginCode()
-    .then((code) => callApi('login', { code: code, token: '' }))
-    .then((r) => {
-      if (!r || r.code !== 0 || !r.openid || !r.token) {
-        throw new Error('网关登录失败: ' + ((r && r.msg) || 'empty'));
-      }
-      _openid = r.openid;
-      _token = r.token;
-      _identityKey = toKey(r.openid);
-      try {
-        wx.setStorageSync(OPENID_STORAGE, r.openid);
-        wx.setStorageSync(TOKEN_STORAGE, r.token);
-      } catch (e) { /* 空间满忽略 */ }
-      _loginInfo = { logged: true, mode: 'cloud_gateway', uid: r.openid, raw: '' };
-      return r;
-    });
-}
-
-/** 尽力初始化 SDK：只服务 attractions 直连读，失败不影响网关同步 */
-function initSdk() {
-  if (!sdkAvailable() || !envConfigured()) return Promise.resolve(null);
-  try {
-    const cloudbase = require('@cloudbase/js-sdk');
-    _app = cloudbase.init({ env: config.CLOUDBASE_ENV });
-    _auth = _app.auth({ persistence: 'local' });
-    return Promise.resolve(_auth.signInAnonymously())
-      .catch((err) => {
-        console.warn('[cb] 匿名登录失败，景点读改走本地缓存:', (err && err.message) || err);
-        return null;
-      })
-      .then(() => _app);
-  } catch (e) {
-    console.error('[cb] SDK 初始化失败:', e.message);
-    return Promise.resolve(null);
-  }
-}
-
-function ready() {
-  if (_readyPromise) return _readyPromise;
-  if (!gwReady() && !sdkAvailable()) return Promise.resolve(null);
-
-  _readyPromise = initSdk()
-    .then(() => {
-      // 本地已有 token：先用，401 时再由 callApiRetry 重登
-      let cachedToken = '';
-      try { cachedToken = wx.getStorageSync(TOKEN_STORAGE) || ''; } catch (e) { /* ignore */ }
-      if (cachedToken) {
-        _token = cachedToken;
-        _openid = (function () { try { return wx.getStorageSync(OPENID_STORAGE) || ''; } catch (e) { return ''; } })();
-        _identityKey = toKey(_openid);
-        if (_identityKey) {
-          _loginInfo = { logged: true, mode: 'resume', uid: _openid, raw: '' };
-          return null;
-        }
-      }
-      return loginByWx();
-    })
-    .then(() => _app || GW)
-    .catch((err) => {
-      const msg = (err && (err.message || err.errMsg)) || err;
-      console.error('[cb] 登录失败，降级本地模式:', msg);
-      _loginInfo = { logged: false, mode: 'local', uid: _openid, raw: String(msg) };
-      if (!_identityKey) _identityKey = toKey(getLegacyUserKey());
-      return _app || GW;
-    })
-    .then((v) => {
-      console.log('[cb] 就绪:', _loginInfo);
-      return v;
-    });
-
-  return _readyPromise;
+  _inited = true;
 }
 
 function db() {
-  return _app.database();
+  return wx.cloud.database();
 }
 
-/** token 失效时重登一次并重试 */
-function callApiRetry(action, payload, timeoutMs) {
-  return callApi(action, payload, timeoutMs).then((r) => {
-    if (r && r.code === 401) {
-      _token = '';
-      try { wx.removeStorageSync(TOKEN_STORAGE); } catch (e) { /* ignore */ }
-      return loginByWx().then(() => callApi(action, payload, timeoutMs)).catch(() => r);
+/** 兼容旧导出 cloudReady()：原语义是网关可用即 true */
+function cloudReady() {
+  return envConfigured();
+}
+
+/**
+ * 登录：init + whoami 云函数拿 openid。
+ * whoami 未部署 / 调用失败 → 不阻塞：客户端直连数据库的归属由云开发自动注入的
+ * _openid 保证（写文档时自动带），登录态按"init 成功即已登录"处理，仅 openid 未知。
+ * 数据接口各自失败时再逐个降级本地。
+ */
+function ready() {
+  if (_readyPromise) return _readyPromise;
+  if (!envConfigured()) return Promise.resolve(null);
+
+  _readyPromise = new Promise((resolve) => {
+    try {
+      initCloud();
+    } catch (e) {
+      resolve(null);
+      return;
     }
-    return r;
+    wx.cloud.callFunction({ name: 'whoami' })
+      .then((r) => {
+        const res = r && r.result;
+        if (res && res.openid) {
+          _openid = res.openid;
+          _loginInfo = { logged: true, mode: 'wxcloud', uid: res.openid, raw: '' };
+          try { wx.setStorageSync('cb.openid', res.openid); } catch (e) { /* ignore */ }
+        } else {
+          _loginInfo = { logged: true, mode: 'wxcloud', uid: '', raw: 'whoami 无 openid' };
+        }
+        resolve(_inited);
+      })
+      .catch((err) => {
+        const msg = (err && (err.errMsg || err.message)) || String(err);
+        console.warn('[cb] whoami 不可用（未部署？），按已登录继续，openid 未知:', msg);
+        _loginInfo = { logged: true, mode: 'wxcloud', uid: '', raw: msg };
+        resolve(_inited); // init 已成功，数据库/云存储照常可用
+      });
+  }).then((ok) => {
+    console.log('[cb] 就绪:', _loginInfo);
+    return ok || null;
   });
+
+  return _readyPromise;
 }
 
 function getLoginInfo() {
@@ -216,80 +112,195 @@ function getLegacyUserKey() {
 
 /** 当前身份键：登录后为 openid 指纹，未登录为设备键 */
 function getUserKey() {
-  if (_identityKey) return _identityKey;
+  if (_openid) return toKey(_openid);
   return getLegacyUserKey();
+}
+
+/** 身份指纹：只留字母数字，限长 */
+function toKey(raw) {
+  const s = String(raw || '').replace(/[^A-Za-z0-9]/g, '');
+  return s ? s.slice(0, 32) : '';
+}
+
+/** 分页拉全集合（绕过客户端单次 20 条上限），失败 resolve null */
+function fetchAll(name, filter) {
+  const col = db().collection(name);
+  const base = filter ? col.where(filter) : col;
+  const out = [];
+  function page(skip) {
+    return base.skip(skip).limit(PAGE_SIZE).get().then((res) => {
+      const batch = res.data || [];
+      out.push.apply(out, batch);
+      if (batch.length === PAGE_SIZE) return page(skip + PAGE_SIZE);
+      return out;
+    }).catch((err) => {
+      console.error('[cb] 拉取集合失败:', name, (err && err.errMsg) || err);
+      return out.length ? out : null;
+    });
+  }
+  return page(0);
+}
+
+/**
+ * 旧环境迁移过来的文档 _id 是「{旧owner}_{业务键}」，与新版按业务键写入的 _id 不一致，
+ * 会导致同一条数据出现两份、删除失效。读到这类文档时按业务键重建一份再删旧文档（幂等）。
+ */
+const _docIds = {}; // collectionName -> { 业务键: 现有文档 _id }
+
+function rememberIds(collectionName, docs, keyOf) {
+  const m = _docIds[collectionName] || (_docIds[collectionName] = {});
+  docs.forEach((d) => {
+    const k = keyOf(d);
+    if (k && !m[String(k)]) m[String(k)] = d._id;
+  });
+}
+
+/** 写入/删除时用云端现有的 _id（避免归一完成前又写出一份重复文档） */
+function resolveId(collectionName, id) {
+  const m = _docIds[collectionName];
+  return (m && m[String(id)]) || String(id);
+}
+
+function normalizeIds(collectionName, docs, keyOf) {
+  if (!docs || !docs.length) return;
+  rememberIds(collectionName, docs, keyOf);
+
+  const col = db().collection(collectionName);
+  const ids = {};
+  docs.forEach((d) => { ids[String(d._id)] = true; });
+
+  docs.forEach((d) => {
+    const key = keyOf(d);
+    if (!key || String(d._id) === String(key)) return;
+    const oldId = String(d._id);
+    const m = _docIds[collectionName];
+
+    // 规范 id 已存在（通常是新版写入的文档），旧文档直接删掉
+    if (ids[String(key)]) {
+      col.doc(oldId).remove()
+        .then(() => { if (m) m[String(key)] = String(key); })
+        .catch((err) => console.error('[cb] 删除旧文档失败:', collectionName, oldId, (err && err.errMsg) || err));
+      return;
+    }
+
+    const data = Object.assign({}, d);
+    delete data._id;
+    delete data._openid; // 由云开发按当前用户自动注入
+    col.doc(String(key)).set({ data: data })
+      .then(() => col.doc(oldId).remove())
+      .then(() => { if (m) m[String(key)] = String(key); })
+      .catch((err) => {
+        console.error('[cb] 归一 _id 失败:', collectionName, oldId, (err && err.errMsg) || err);
+      });
+  });
 }
 
 // ---------- marks ----------
 
 /** 拉云端标记：[{ adcode, status, name, center, updatedAt }]；失败 null */
 function fetchMarks() {
-  return ready().then((app) => {
-    if (!app) return null;
-    return callApiRetry('pull', { col: 'marks' }).then((r) => {
-      if (!r || r.code !== 0) return null;
-      return (r.list || []).slice(0, MARKS_LIMIT);
+  return ready().then(() => {
+    if (!envConfigured()) return null;
+    return fetchAll('marks').then((docs) => {
+      if (!docs) return null;
+      normalizeIds('marks', docs, (d) => d.adcode || '');
+      return docs.slice(0, MARKS_LIMIT).map((d) => ({
+        adcode: d.adcode || d._id,
+        status: d.status,
+        name: d.name || '',
+        center: d.center || null,
+        updatedAt: d.updatedAt || 0
+      }));
     });
   });
 }
 
-/** 写/删一条标记（status 空 = 删除） */
+/** 写/删一条标记（status 空 = 删除），doc _id 即 adcode */
 function pushMark(doc) {
-  return ready().then((app) => {
-    if (!app) return false;
-    const p = doc.status
-      ? callApiRetry('put', {
-        col: 'marks',
-        id: doc.adcode,
-        data: {
-          adcode: doc.adcode,
-          status: doc.status,
-          name: doc.name || '',
-          center: doc.center || null,
-          updatedAt: doc.updatedAt || Date.now()
-        }
-      })
-      : callApiRetry('del', { col: 'marks', id: doc.adcode });
-    return p.then((r) => !!(r && r.code === 0));
+  return ready().then(() => {
+    if (!envConfigured()) return false;
+    const col = db().collection('marks');
+    const targetId = resolveId('marks', doc.adcode);
+    if (!doc.status) {
+      return col.doc(String(targetId)).remove()
+        .then(() => true)
+        .catch((err) => {
+          // 文档不存在视为已删
+          if (err && /not exist|document/i.test(err.errMsg || '')) return true;
+          console.error('[cb] 删标记失败:', (err && err.errMsg) || err);
+          return false;
+        });
+    }
+    return col.doc(String(targetId)).set({
+      data: {
+        adcode: doc.adcode,
+        status: doc.status,
+        name: doc.name || '',
+        center: doc.center || null,
+        updatedAt: doc.updatedAt || Date.now()
+      }
+    }).then(() => true).catch((err) => {
+      console.error('[cb] 写标记失败:', (err && err.errMsg) || err);
+      return false;
+    });
   });
 }
 
-// ---------- 通用集合（diaries / chats） ----------
+// ---------- 通用集合（diaries / chats / memories） ----------
 
-/** 拉当前用户在某集合的全部文档 */
+/** 拉当前用户在某集合的全部文档（权限规则自动按 _openid 过滤） */
 function listDocs(collectionName) {
-  return ready().then((app) => {
-    if (!app) return null;
-    return callApiRetry('pull', { col: collectionName }).then((r) => {
-      if (!r || r.code !== 0) return null;
-      return r.list || [];
+  return ready().then(() => {
+    if (!envConfigured()) return null;
+    return fetchAll(collectionName).then((docs) => {
+      // 日记按 date、对话固定 history 作为业务键
+      normalizeIds(collectionName, docs, (d) => {
+        if (collectionName === 'diaries') return d.date || '';
+        if (collectionName === 'chats') return 'history';
+        return '';
+      });
+      return docs;
     });
   });
 }
 
 /** 覆盖写一条；id 由业务决定（标记用 adcode、日记用日期） */
 function setDoc(collectionName, id, data) {
-  return ready().then((app) => {
-    if (!app) return false;
-    return callApiRetry('put', { col: collectionName, id: id, data: data })
-      .then((r) => !!(r && r.code === 0));
+  return ready().then(() => {
+    if (!envConfigured()) return false;
+    return db().collection(collectionName).doc(String(resolveId(collectionName, id))).set({ data: data })
+      .then(() => true)
+      .catch((err) => {
+        console.error('[cb] setDoc 失败:', collectionName, (err && err.errMsg) || err);
+        return false;
+      });
   });
 }
 
 function removeDoc(collectionName, id) {
-  return ready().then((app) => {
-    if (!app) return false;
-    return callApiRetry('del', { col: collectionName, id: id })
-      .then((r) => !!(r && r.code === 0));
+  return ready().then(() => {
+    if (!envConfigured()) return false;
+    return db().collection(collectionName).doc(String(resolveId(collectionName, id))).remove()
+      .then(() => true)
+      .catch((err) => {
+        if (err && /not exist|document/i.test(err.errMsg || '')) return true;
+        console.error('[cb] removeDoc 失败:', collectionName, (err && err.errMsg) || err);
+        return false;
+      });
   });
 }
 
 /** 清空当前用户在某个集合的全部文档；返回删除条数（-1 表示失败） */
 function clearCollection(collectionName) {
-  return ready().then((app) => {
-    if (!app) return -1;
-    return callApiRetry('clear', { col: collectionName })
-      .then((r) => (r && r.code === 0 ? (r.n || 0) : -1));
+  return ready().then(() => {
+    if (!envConfigured()) return -1;
+    // 客户端无 where().remove()，只能逐条删
+    return fetchAll(collectionName).then((docs) => {
+      if (!docs) return -1;
+      const col = db().collection(collectionName);
+      const jobs = docs.map((d) => col.doc(d._id).remove().catch(() => null));
+      return Promise.all(jobs).then((rs) => rs.filter(Boolean).length);
+    });
   });
 }
 
@@ -302,77 +313,54 @@ function guessExt(localPath) {
   return /^(jpg|jpeg|png|webp)$/.test(e) ? e : 'jpg';
 }
 
-/** 读本地文件为 base64（不含 data: 前缀） */
-function readFileBase64(localPath) {
-  return new Promise((resolve) => {
-    try {
-      wx.getFileSystemManager().readFile({
-        filePath: localPath,
-        encoding: 'base64',
-        success: (res) => resolve(res && res.data ? res.data : ''),
-        fail: (err) => {
-          console.error('[cb] 读本地图片失败:', (err && err.errMsg) || err);
-          resolve('');
-        }
-      });
-    } catch (e) {
-      resolve('');
-    }
-  });
-}
-
 /**
  * 上传一张本地图片到云存储 → { fileID }
- * 失败（未登录 / 无网关 / 过大 / 网络错）一律 resolve null，由业务层降级用本地路径展示。
- * 图片先由调用方压缩到长边 1600 左右再传，避免撞网关体积上限。
+ * 失败 resolve null，由业务层降级用本地路径展示。
+ * 走 wx.cloud.uploadFile，无旧网关 base64 2MB 限制（调用方仍应压缩省流量）。
  */
 function uploadImage(localPath, ext) {
-  if (!localPath || !gwReady()) return Promise.resolve(null);
-  return ready().then((app) => {
-    if (!app) return null;
-    return readFileBase64(localPath).then((base64) => {
-      if (!base64) return null;
-      if (base64.length > UPLOAD_MAX_BASE64) {
-        console.warn('[cb] 图片超过体积上限，跳过上传:', localPath, base64.length);
-        return null;
-      }
-      return callApiRetry('upload', { base64: base64, ext: ext || guessExt(localPath) }, 30000)
-        .then((r) => (r && r.code === 0 && r.fileID ? { fileID: r.fileID } : null));
+  if (!localPath || !envConfigured()) return Promise.resolve(null);
+  const e = ext || guessExt(localPath);
+  const cloudPath = 'photos/' + Date.now().toString(36) + '_' +
+    Math.random().toString(36).slice(2, 8) + '.' + e;
+  return wx.cloud.uploadFile({
+    cloudPath: cloudPath,
+    filePath: localPath
+  }).then((r) => (r && r.fileID ? { fileID: r.fileID } : null))
+    .catch((err) => {
+      console.error('[cb] 上传失败:', (err && err.errMsg) || err);
+      return null;
     });
-  }).catch((err) => {
-    console.error('[cb] 上传失败:', (err && err.message) || err);
-    return null;
-  });
 }
 
 /** 批量 fileID → 临时链接（默认 2 小时），返回 { fileID: url } */
 function getFileUrls(fileIDs) {
   const ids = (fileIDs || []).filter(Boolean);
-  if (!ids.length || !gwReady()) return Promise.resolve({});
-  return ready().then((app) => {
-    if (!app) return {};
-    return callApiRetry('fileUrl', { fileIDs: ids }).then((r) => {
-      if (!r || r.code !== 0) return {};
-      const map = {};
-      (r.list || []).forEach((it) => {
-        if (it && it.fileID && it.tempFileURL) map[it.fileID] = it.tempFileURL;
-      });
-      return map;
+  if (!ids.length || !envConfigured()) return Promise.resolve({});
+  return wx.cloud.getTempFileURL({ fileList: ids }).then((r) => {
+    const map = {};
+    ((r && r.fileList) || []).forEach((it) => {
+      if (it && it.fileID && it.tempFileURL) map[it.fileID] = it.tempFileURL;
     });
-  }).catch(() => ({}));
+    return map;
+  }).catch((err) => {
+    console.error('[cb] 取临时链接失败:', (err && err.errMsg) || err);
+    return {};
+  });
 }
 
 /** 删除云存储文件（条目删除时清理，失败静默容忍孤儿） */
 function deleteFiles(fileIDs) {
   const ids = (fileIDs || []).filter(Boolean);
-  if (!ids.length || !gwReady()) return Promise.resolve(false);
-  return ready().then((app) => {
-    if (!app) return false;
-    return callApiRetry('delFiles', { fileIDs: ids }).then((r) => !!(r && r.code === 0));
-  }).catch(() => false);
+  if (!ids.length || !envConfigured()) return Promise.resolve(false);
+  return wx.cloud.deleteFile({ fileList: ids }).then(() => true)
+    .catch((err) => {
+      console.error('[cb] 删文件失败:', (err && err.errMsg) || err);
+      return false;
+    });
 }
 
-// ---------- attractions（公开只读，直连更快） ----------
+// ---------- attractions（公开只读，直连） ----------
 
 function cacheKey(adcode) {
   return 'travel.attr.' + adcode;
@@ -392,21 +380,20 @@ function writeCache(adcode, list) {
 
 /**
  * 查景点：本地缓存 → 云端 attractions（adcode 命中，未命中再查 fallbackCode 省级）
- * 该集合权限档为 ADMINWRITE（所有用户可读、客户端不可写），匿名登录态即可读。
+ * 该集合权限档需设为「所有用户可读」（控制台手动配置）。
  */
 function fetchAttractions(adcode, fallbackCode, limit) {
   limit = limit || 6;
   const hit = readCache(adcode);
   if (hit) return Promise.resolve(hit);
 
-  return ready().then((app) => {
-    if (!_app) return Promise.resolve([]); // SDK 不可用时只能吃缓存
+  return ready().then(() => {
+    if (!envConfigured()) return Promise.resolve([]);
     const _ = db().command;
-    const col = db().collection('attractions');
     const where = fallbackCode && fallbackCode !== adcode
-      ? { adcode: _.in([adcode, fallbackCode]) }
-      : { adcode: adcode };
-    return col.where(where).limit(limit).get().then((res) => {
+      ? { adcode: _.in([String(adcode), String(fallbackCode)]) }
+      : { adcode: String(adcode) };
+    return db().collection('attractions').where(where).limit(limit).get().then((res) => {
       const list = (res.data || []).map((d) => ({
         name: d.name || '',
         desc: d.desc || '',
@@ -417,7 +404,7 @@ function fetchAttractions(adcode, fallbackCode, limit) {
       if (list.length) writeCache(adcode, list);
       return list;
     }).catch((err) => {
-      console.error('[cb] 查询景点失败:', adcode, err && err.message || err);
+      console.error('[cb] 查询景点失败:', adcode, (err && err.errMsg) || err);
       return [];
     });
   });
@@ -425,93 +412,29 @@ function fetchAttractions(adcode, fallbackCode, limit) {
 
 /* @dev:begin */
 /**
- * 网关 POST（严格版）：失败直接 reject 并带可读原因。
- * 与 gwRequest 的区别：gwRequest 网络失败时 resolve(null) 让业务静默降级，
- * 这里必须把原因抛到调用方，UI 才能告诉用户到底哪一步断了。
- */
-function gwPostStrict(fnName, payload, timeoutMs) {
-  if (!GATEWAY_BASE) return Promise.reject(new Error('未配置云端网关'));
-  return new Promise((resolve, reject) => {
-    wx.request({
-      url: GATEWAY_BASE + '/' + fnName,
-      method: 'POST',
-      header: { 'content-type': 'application/json' },
-      data: payload || {},
-      timeout: timeoutMs || config.GEN_TIMEOUT,
-      success: (res) => {
-        let body = res && res.data;
-        if (typeof body === 'string') {
-          try { body = JSON.parse(body); } catch (e) { body = null; }
-        }
-        if (!body || typeof body !== 'object') {
-          reject(new Error('网关返回异常（HTTP ' + (res && res.statusCode) + '）'));
-          return;
-        }
-        resolve(body);
-      },
-      fail: (err) => reject(new Error(gwErrText(err)))
-    });
-  });
-}
-
-/** wx.request 的 fail 归类成人能看懂的原因 */
-function gwErrText(err) {
-  const m = String((err && err.errMsg) || '');
-  if (/url not in domain list/i.test(m)) {
-    return '网关域名未加入 request 合法域名（开发版可临时开调试模式）';
-  }
-  if (/timeout/i.test(m)) return '请求超时，稍后再试';
-  if (/net::|ERR_CONNECTION|ERR_NAME/i.test(m)) return '网络连接失败，检查手机网络';
-  if (/ssl|handshake/i.test(m)) return 'HTTPS 证书校验失败';
-  return m || '网络请求失败';
-}
-
-/** 一次网关调用（payload 里带当前 token） */
-function genRequest(adcode, regionName, parentName) {
-  return gwPostStrict('genAttraction', {
-    adcode: adcode,
-    name: regionName,
-    parent: parentName || '',
-    token: _token
-  });
-}
-
-/**
- * 按需生成景点推荐：唯一链路是云函数 genAttraction。
+ * 按需生成景点推荐：wx.cloud.callFunction('genAttraction')。
  * LLM 的 key 只存在云函数环境变量里，客户端不持有、不透传。
- * 走网关而非 SDK callFunction：匿名身份调 /v1/functions 会被 EXCEED_AUTHORITY 拒。
- * 注意：超时按 config.GEN_TIMEOUT（55s）算，模型生成本身就要 15~30s，
- * 沿用 gwRequest 的 15s 默认值会稳定超时。
+ * 注意：模型生成本身要 15~30s，云函数需在 config.json 配 timeout 55s 以上。
  */
 function genAttractions(adcode, regionName, parentName) {
   return ready().then(() => {
-    if (!gwReady()) return Promise.reject(new Error('未配置云端网关'));
-    return genRequest(adcode, regionName, parentName)
-      .then((r) => {
-        // token 30 天过期：清掉重登一次再试
-        if (r && r.code === 401) {
-          _token = '';
-          try { wx.removeStorageSync(TOKEN_STORAGE); } catch (e) { /* ignore */ }
-          return loginByWx().then(() => genRequest(adcode, regionName, parentName));
-        }
-        return r;
-      })
-      .then((r) => {
-        if (r && r.code === 0 && Array.isArray(r.list) && r.list.length) {
-          writeCache(adcode, r.list);
-          return r.list;
-        }
-        if (r && r.code === 2) throw new Error('服务端未配置 SILICONFLOW_KEY');
-        if (r && r.code === 401) throw new Error('登录态失效，请重进小程序再试');
-        throw new Error((r && r.msg) || '生成失败');
-      });
-  }).catch((err) => {
-    // 重登失败时的原始文案太绕，换成能指导操作的
-    const m = (err && err.message) || '';
-    if (/网关登录失败|wx\.login/.test(m)) {
-      throw new Error('网关登录失败，检查云函数 WX_APPID/WX_SECRET 与网关域名');
-    }
-    throw err;
+    if (!envConfigured()) return Promise.reject(new Error('未配置云开发环境'));
+    return wx.cloud.callFunction({
+      name: 'genAttraction',
+      data: { adcode: adcode, name: regionName, parent: parentName || '' }
+    }).then((r) => {
+      const res = r && r.result;
+      if (res && res.code === 0 && Array.isArray(res.list) && res.list.length) {
+        writeCache(adcode, res.list);
+        return res.list;
+      }
+      if (res && res.code === 2) throw new Error('服务端未配置 SILICONFLOW_KEY');
+      throw new Error((res && res.msg) || '生成失败');
+    }).catch((err) => {
+      const m = String((err && err.errMsg) || err.message || err);
+      if (/timeout/i.test(m)) throw new Error('生成超时，稍后再试');
+      throw new Error(m || '生成失败');
+    });
   });
 }
 /* @dev:end */
@@ -520,7 +443,7 @@ module.exports = {
   ready,
   sdkAvailable,
   envConfigured,
-  cloudReady: gwReady,
+  cloudReady,
   getUserKey,
   getLoginInfo,
   getOpenid,

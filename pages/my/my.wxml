@@ -2,7 +2,7 @@
 
   <view class="hero">
     <view class="hero-title">南山工作台</view>
-    <view class="text-dim hero-sub">旅行足迹 · 云端同步</view>
+    <view class="text-dim hero-sub">日记 · 旅行 · 云端同步</view>
   </view>
 
   <!-- 同步状态 -->
@@ -16,6 +16,14 @@
 
   <!-- 数据概览 -->
   <view class="stats-row">
+    <view class="stats-item">
+      <view class="stats-num">{{diaryCount}}</view>
+      <view class="text-dim">日记篇数</view>
+    </view>
+    <view class="stats-item">
+      <view class="stats-num">{{diaryChars}}</view>
+      <view class="text-dim">累计字数</view>
+    </view>
     <view class="stats-item">
       <view class="stats-num">{{visitedCount}}</view>
       <view class="text-dim">去过</view>

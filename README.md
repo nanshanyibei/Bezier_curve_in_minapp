@@ -25,9 +25,9 @@ node scripts/build.js prod
 
 构建会：
 1. 按白名单拷贝到 `dist/prod`
-2. 剔除 `utils/ai.js`（本地 LLM 直连兜底）
-3. 剥离所有 `@dev:begin` / `@dev:end` 标记块（含旅行页「AI 补充」入口）
-4. 重写 `app.json` 的 `pages`
+2. 剔除 AI 页面（`pages/assistant`、`pages/insight`）与工具模块（`utils/ai.js`、`sse.js`、`insightPrompt.js`、`insightParse.js`）
+3. 剥离所有 `@dev:begin` / `@dev:end` 标记块（含日记 AI 分析入口、旅行页「AI 补充」入口）
+4. 重写 `app.json` 的 `pages`，并把 tabBar 裁成日记 / 旅行 / 我的
 5. 残留关键词校验（AI 字样、模型服务商等），命中即构建失败
 
 然后：开发者工具 → 导入项目 → 选 `dist/prod` → 上传。
@@ -50,9 +50,11 @@ onDevOnly() {}
 
 ## 目录约定
 
-- `pages/travel` 旅行足迹地图（首页，canvas + 行政区划边界），含清单 `list`、回忆册 `memory`
-- `pages/my` 我的（数据概览、隐私指引），从旅行页顶部「我的」进入
-- 无 tab 栏，单入口应用
+- 底部 4 tab：日记 / 旅行 / 对话 / 我的，启动页为日记
+- `pages/diary` 日记（本地 + 云端同步，AI 分析入口在 dev 包）
+- `pages/assistant` AI 对话（dev 包，仅体验版自用）
+- `pages/insight` 日记 AI 分析（dev 包，仅体验版自用）
+- `pages/travel` 旅行足迹地图（canvas + 行政区划边界），含清单 `list`、回忆册 `memory`
 - `pages/travel/list` 足迹清单（省级分组、覆盖率、点条目回地图定位）
 - `pages/travel/memory` 城市回忆册 + 编辑页（一城多条、文字/照片/日期，照片存本地永久路径并异步上云换 fileID，失败降级本地展示）
 - `pages/my` 我的（数据概览、隐私指引）

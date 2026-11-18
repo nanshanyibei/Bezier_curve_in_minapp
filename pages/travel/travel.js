@@ -191,10 +191,6 @@ Page({
     wx.navigateTo({ url: '/pages/travel/list/list' });
   },
 
-  onOpenMy() {
-    wx.navigateTo({ url: '/pages/my/my' });
-  },
-
   // ---------- 从清单页定位 ----------
   findRegion(layer, adcode) {
     if (!layer || !layer.regions) return null;

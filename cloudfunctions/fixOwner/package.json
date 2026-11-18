@@ -1,0 +1,9 @@
+{
+  "name": "fixOwner",
+  "version": "1.0.0",
+  "description": "一次性修补导入数据的 _openid（跑完可删）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

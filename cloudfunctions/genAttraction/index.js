@@ -1,79 +1,26 @@
 /**
- * 云函数 genAttraction：按需生成景点推荐
+ * 云函数 genAttraction：按需生成景点推荐（2026-11 迁移版，wx-server-sdk）
  *
- * 入参（HTTP 网关路由 /genAttraction，body 即业务参数）：
- *   { adcode, name, parent?, token }
- * 流程：校验身份 → 已有 llm 数据则直接返回 → LLM 生成 5 条 → 校验 → 写 attractions → 返回全量
+ * 入参（wx.cloud.callFunction）：{ adcode, name, parent? }
+ * 流程：已有足够 llm 数据直接返回 → LLM 生成 5 条 → 校验 → 写 attractions → 返回全量
+ * 身份：callFunction 自带微信登录态（getWXContext().OPENID），无需 HMAC token；
+ *       客户端匿名无法直调未授权云函数，公网裸调风险天然消除。
  *
  * 环境变量：
- *   WX_APPID / WX_SECRET   与 wxauth 同值；配置后强制校验 token（防止公网裸调烧额度）
- *   SILICONFLOW_KEY        必配。key 只在服务端，客户端不再透传（2026-11 起移除 llmKey 入参）
+ *   SILICONFLOW_KEY        必配（云开发控制台 → 云函数 → 配置）
  *   SILICONFLOW_MODEL      可选
  *
- * pgdoc 两个坑（与 wxauth 同源，已处理）：
- *   1. node-sdk 读到的文档是 { _id, data: {...} } 两层，需 unwrap；
- *   2. where 匹配不到顶层字段，要写 'data.adcode'；查不到时退回全表 + JS 过滤。
+ * ⚠️ config.json 已配 timeout 55s：模型生成要 15~30s，默认 3s 会稳定超时。
  */
-const cloudbase = require('@cloudbase/node-sdk');
-const crypto = require('crypto');
+const cloud = require('wx-server-sdk');
 
-const app = cloudbase.init({ env: cloudbase.SYMBOL_CURRENT_ENV });
-const db = app.database();
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+const db = cloud.database();
 
 const COL = 'attractions';
 const LLM_BASE = 'https://api.siliconflow.cn/v1/chat/completions';
 const MODEL = process.env.SILICONFLOW_MODEL || 'deepseek-ai/DeepSeek-V4-Flash';
-
-const APPID = process.env.WX_APPID;
-const SECRET = process.env.WX_SECRET;
 const MAX_LLM_SPOTS = 12; // 单 adcode 的 llm 数据上限，超过不再调模型
-
-/** HTTP 网关路由下 event 被包成 { path, httpMethod, headers, body } */
-function normalizeEvent(event) {
-  let e = event || {};
-  if (typeof e.body === 'string') {
-    try { e = JSON.parse(e.body); } catch (err) { e = {}; }
-  } else if (e.body && typeof e.body === 'object') {
-    e = e.body;
-  }
-  return e || {};
-}
-
-// ---------- token（与 wxauth 同算法） ----------
-
-function tokenKey() {
-  return crypto.createHash('sha256').update('tcb|' + APPID + '|' + SECRET).digest();
-}
-
-function verifyToken(token) {
-  if (!token || typeof token !== 'string') return '';
-  const parts = token.split('.');
-  if (parts.length !== 2) return '';
-  const expect = crypto.createHmac('sha256', tokenKey()).update(parts[0]).digest('base64url');
-  const a = Buffer.from(parts[1]);
-  const b = Buffer.from(expect);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return '';
-  try {
-    const obj = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
-    if (!obj || !obj.o || !obj.e || obj.e < Date.now()) return '';
-    return obj.o;
-  } catch (e) {
-    return '';
-  }
-}
-
-/** 应用密钥：只从环境变量取，不接受客户端透传（避免 key 泄漏到前端/日志） */
-function llmKey() {
-  return process.env.SILICONFLOW_KEY || '';
-}
-
-/** 剥掉 pgdoc 的 data 包装 */
-function unwrap(d) {
-  if (d && d.data && typeof d.data === 'object' && !Array.isArray(d.data)) {
-    return Object.assign({ _id: d._id }, d.data);
-  }
-  return d;
-}
 
 function shape(d) {
   return {
@@ -85,17 +32,11 @@ function shape(d) {
   };
 }
 
-/** 取某 adcode 下已有景点（两条路径都试，绕开 pgdoc 的 where 语义差异） */
 async function listByAdcode(adcode) {
   const key = String(adcode);
   try {
-    const r = await db.collection(COL).where({ 'data.adcode': key }).limit(100).get();
-    const list = (r.data || []).map(unwrap).filter((d) => String(d.adcode) === key);
-    if (list.length) return list;
-  } catch (e) { /* 落到全表兜底 */ }
-  try {
-    const all = await db.collection(COL).limit(500).get();
-    return (all.data || []).map(unwrap).filter((d) => String(d.adcode) === key);
+    const r = await db.collection(COL).where({ adcode: key }).limit(100).get();
+    return (r.data || []).filter((d) => String(d.adcode) === key);
   } catch (e) {
     return [];
   }
@@ -172,31 +113,17 @@ function docId(adcode, name) {
 }
 
 async function save(spot) {
-  const id = docId(spot.adcode, spot.name);
-  try {
-    // 直接传文档体，避免 pgdoc 下多包一层 data
-    await db.collection(COL).doc(id).set(spot);
-  } catch (e) {
-    console.error('[genAttraction] set 失败，尝试 add:', e.message);
-    await db.collection(COL).add(spot);
-  }
+  await db.collection(COL).doc(spot._id).set(spot);
 }
 
 exports.main = async (event) => {
-  const e = normalizeEvent(event);
-
-  // 配了密钥就强制鉴权，避免公网裸调消耗 LLM 额度
-  if (APPID && SECRET) {
-    const openid = verifyToken(e.token);
-    if (!openid) return { code: 401, msg: 'UNAUTHORIZED', list: [] };
-  }
-
+  const e = event || {};
   const adcode = e.adcode;
   const name = e.name;
   const parent = e.parent;
   if (!adcode || !name) return { code: 1, msg: '缺少 adcode/name' };
 
-  const key = llmKey();
+  const key = process.env.SILICONFLOW_KEY || '';
   if (!key) {
     console.error('[genAttraction] 未配置环境变量 SILICONFLOW_KEY');
     return { code: 2, msg: 'NO_LLM_KEY', list: [] };
@@ -218,7 +145,10 @@ exports.main = async (event) => {
       + '只输出 JSON 数组，不要任何其他文字。';
 
     const content = await callLLM(prompt, key);
-    const spots = validate(extractJson(content), adcode);
+    const spots = validate(extractJson(content), adcode).map((s) => {
+      s._id = docId(s.adcode, s.name);
+      return s;
+    });
     if (!spots.length) return { code: 1, msg: '生成结果校验后为空' };
 
     const have = {};

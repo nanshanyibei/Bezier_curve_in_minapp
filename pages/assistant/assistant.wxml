@@ -1,0 +1,76 @@
+<view class="app">
+
+  <!-- 顶栏 -->
+  <view class="topbar">
+    <view class="text-dim">{{hasKey ? '软考备考助手 · 流式' : '未配置 API Key'}}</view>
+    <view class="topbar-btns">
+      <text class="topbar-btn" bindtap="onClear">清空</text>
+      <text class="topbar-btn" bindtap="onOpenKeyModal">⚙ 设置</text>
+    </view>
+  </view>
+
+  <!-- 消息列表 -->
+  <scroll-view class="messages" scroll-y scroll-into-view="{{scrollInto}}" scroll-with-animation>
+    <view wx:if="{{!messages.length}}" class="empty">
+      <view class="empty-title">软考备考助手</view>
+      <view class="empty-desc text-dim">多轮问答 · 知识点讲解 · 备考规划</view>
+      <view class="sug-row">
+        <view class="sug" wx:for="{{suggestions}}" wx:key="*this"
+              data-text="{{item}}" bindtap="onSuggestionTap">{{item}}</view>
+      </view>
+    </view>
+
+    <view wx:for="{{messages}}" wx:key="id" id="{{item.id}}"
+          class="msg {{item.role === 'user' ? 'msg-user' : 'msg-ai'}}">
+      <view class="bubble {{item.role === 'user' ? 'bubble-user' : 'bubble-ai'}}">
+        <!-- 思考过程 -->
+        <view wx:if="{{item.thinking}}" class="think">
+          <view class="think-head" bindtap="toggleThink" data-i="{{index}}">
+            思考过程 · {{item.thinking.length}} 字 · {{item.thinkOpen ? '收起 ▴' : '展开 ▾'}}
+          </view>
+          <view wx:if="{{item.thinkOpen}}" class="think-body">{{item.thinking}}</view>
+        </view>
+
+        <!-- 正文 -->
+        <text user-select class="content {{item.streaming && !item.content ? 'invisible' : ''}}">{{item.content}}</text>
+
+        <!-- 等待首字 -->
+        <view wx:if="{{item.streaming && !item.content}}" class="dots"><view/><view/><view/></view>
+
+        <!-- 流式光标 -->
+        <view wx:if="{{item.streaming && item.content}}" class="caret" />
+
+        <!-- 元信息 -->
+        <view wx:if="{{!item.streaming && item.role === 'assistant'}}" class="meta text-dim">
+          用时 {{item.elapsedText}}
+        </view>
+      </view>
+    </view>
+    <view id="anchor-bottom" class="anchor" />
+  </scroll-view>
+
+  <!-- 输入栏 -->
+  <view class="composer">
+    <textarea class="input" value="{{input}}" bindinput="onInput"
+              confirm-type="send" bindconfirm="onSend"
+              auto-height maxlength="-1" adjust-position
+              placeholder="{{hasKey ? '问点什么，如：可用度怎么算？' : '请先点击右上角 ⚙ 配置 API Key'}}"
+              disabled="{{busy}}" />
+    <button wx:if="{{busy}}" class="btn-danger stop-btn" bindtap="stop">停止</button>
+    <button wx:else class="btn send-btn" disabled="{{!canSend}}" bindtap="onSend">发送</button>
+  </view>
+
+  <!-- Key 设置弹层 -->
+  <view wx:if="{{showKeyModal}}" class="mask" bindtap="onCloseKeyModal">
+    <view class="modal" catchtap="noop">
+      <view class="card-title">API Key 设置</view>
+      <view class="text-dim modal-tip">开发期直连硅基流动，Key 仅存本机。请在 platform.siliconflow.cn 创建 Key。</view>
+      <input class="key-input" value="{{keyInput}}" bindinput="onKeyInput"
+             placeholder="sk-..." password />
+      <view class="modal-btns">
+        <button class="btn-ghost modal-btn" bindtap="onCloseKeyModal">取消</button>
+        <button class="btn modal-btn" bindtap="onSaveKey">保存</button>
+      </view>
+    </view>
+  </view>
+</view>

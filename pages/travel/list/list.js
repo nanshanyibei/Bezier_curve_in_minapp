@@ -80,7 +80,7 @@ Page({
     if (pages.length > 1) {
       wx.navigateBack({ delta: 1 });
     } else {
-      wx.reLaunch({ url: '/pages/travel/travel' });
+      wx.switchTab({ url: '/pages/travel/travel' });
     }
   }
 });

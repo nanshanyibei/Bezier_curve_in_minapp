@@ -1,8 +1,9 @@
 const travelStore = require('../../../utils/travelStore');
+const diaryStore = require('../../../utils/diaryStore');
 const cb = require('../../../utils/cb');
 
-// 旧版日记功能的存储键（功能已下线，清除数据时仍需清理残留）
-const LEGACY_DIARY_KEY = 'diary.entries';
+// 对话记录本地缓存键（与 assistant 页保持一致）
+const CHAT_KEYS = ['chat.messages', 'chat.updatedAt'];
 
 Page({
   data: {
@@ -28,8 +29,9 @@ Page({
       confirmColor: '#ef7d7d',
       success: (res) => {
         if (!res.confirm) return;
-        wx.removeStorageSync(LEGACY_DIARY_KEY);
+        wx.removeStorageSync(diaryStore.KEY);
         wx.removeStorageSync(travelStore.KEY);
+        CHAT_KEYS.forEach((k) => wx.removeStorageSync(k));
         wx.showToast({ title: '已清除本机缓存', icon: 'success' });
       }
     });
@@ -53,10 +55,9 @@ Page({
           const failed = r.some((n) => n < 0);
           // 云端删干净了才清本地，避免本地没了云端还在
           if (!failed) {
-            wx.removeStorageSync(LEGACY_DIARY_KEY);
+            wx.removeStorageSync(diaryStore.KEY);
             wx.removeStorageSync(travelStore.KEY);
-            wx.removeStorageSync('chat.messages');
-            wx.removeStorageSync('chat.updatedAt');
+            CHAT_KEYS.forEach((k) => wx.removeStorageSync(k));
           }
           wx.showToast({
             title: failed ? '部分删除失败，请检查网络' : '已删除云端数据',

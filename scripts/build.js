@@ -23,13 +23,14 @@ const OUT = path.join(ROOT, 'dist', 'prod');
 const TOP_ENTRIES = ['app.js', 'app.json', 'app.wxss', 'config.js', 'sitemap.json', 'pages', 'utils', 'assets', 'subpackages'];
 
 /** 生产包剔除的页面目录（相对 pages/） */
-const DROP_PAGES = [];
+const DROP_PAGES = ['assistant', 'insight'];
 
 /** 生产包剔除的工具模块（相对 utils/） */
-const DROP_UTILS = ['ai.js'];
+const DROP_UTILS = ['ai.js', 'sse.js', 'insightPrompt.js', 'insightParse.js'];
 
 /** 生产包页面清单，顺序即注册顺序 */
 const PROD_PAGES = [
+  'pages/diary/diary',
   'pages/travel/travel',
   'pages/travel/list/list',
   'pages/travel/memory/memory',
@@ -129,6 +130,10 @@ function buildProd() {
   const appJsonPath = path.join(OUT, 'app.json');
   const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
   appJson.pages = PROD_PAGES.slice();
+  // tabBar 只保留生产包仍存在的页面，避免指向被剔除的 AI 页面
+  if (appJson.tabBar && Array.isArray(appJson.tabBar.list)) {
+    appJson.tabBar.list = appJson.tabBar.list.filter((it) => PROD_PAGES.includes(it.pagePath));
+  }
   fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + '\n', 'utf8');
 
   log('→ 生成 project.config.json');

@@ -1,7 +1,7 @@
 # 评估：迁到微信云开发（wx.cloud）数据库
 
-> 结论：**建议迁**。一次动作同时解决两个痛点（域名备案、PG 核时），数据可平滑搬迁。
-> 评估日期：2026-11-16；2026-11-17 修正：**账号非微信云开发新用户，无免费环境**，基础套餐 ¥19.9/月（原价 ¥39，5 折长期有效）。
+> 结论：**已实施**。代码迁移完成于 2026-11-18，新环境 ai-walk-d6g6stcxs36a8e427（新小程序「AI 足迹星球」，appid wx5bf7979372d41257）。
+> 方案演进：2026-11-16 评估 → 11-17 归因复核（PG 核时是业务自带，砍不掉）→ 11-17 发现免费环境资格按 appid 判定（旧号已发布不可用）→ 11-17 注册新小程序走免费环境（未发布阶段免续费，发布后 15 天到期，活动截止 2026-12-31，最坏转 ¥19.9/月）。
 
 ## 一、为什么迁
 
@@ -74,3 +74,27 @@
 ## 六、备选（不想动代码时的止血方案）
 
 腾讯云 CloudBase 升到**个人版 ¥19.9/月**：套餐文档写明「关系型数据库，个人版默认开启自动暂停」，核时消耗应大幅下降，额度涨到 40,000 点。但**域名备案问题依然存在**，且仍受 pgdoc 兼容层拖累。属于过渡方案，不解决根因。
+
+---
+
+## 五、实施记录（2026-11-18）
+
+新环境：`ai-walk-d6g6stcxs36a8e427`（小程序「AI 足迹星球」）。
+
+### 已完成的代码改动
+
+| 文件 | 改动 |
+|---|---|
+| `utils/cb.js` | 541 行 → 全量重写：wx.cloud.database() 直查、分页绕过客户端单次 20 条上限、uploadFile 直传（去掉 base64/2MB 网关限制）、callFunction 调 genAttraction；**16 个对外方法签名不变，页面零改动** |
+| `config.js` | `CLOUDBASE_ENV`/`CLOUD_GATEWAY_BASE` 删除，新增 `WX_CLOUD_ENV` |
+| `cloudfunctions/whoami/` | 新增：返回调用者 openid（登录态确认 + 数据认领用） |
+| `cloudfunctions/genAttraction/` | 重写：@cloudbase/node-sdk → wx-server-sdk，删 HMAC token/pgdoc 兼容，新增 config.json timeout 55s |
+| `cloudfunctions/wxauth/` | **整目录删除**（-289 行，HMAC 鉴权不再需要） |
+
+### 待办（用户手动）
+
+1. 开发者工具确认 `project.config.json` appid 为新号（当前 wx5bf7979372d41257，如与后台一致则不动）
+2. 右键 `whoami` / `genAttraction` → 上传并部署：云端安装依赖
+3. genAttraction 配置环境变量 `SILICONFLOW_KEY`（云开发控制台 → 云函数 → 配置）
+4. 数据库建集合：marks / diaries / chats / memories（权限=仅创建者可读写），attractions（权限=所有用户可读）
+5. 数据导入：backup/cloudbase-export-2026-11-17/ 四个 JSON，owner→_openid 映射（每人打开新小程序收集新 openid 后生成导入文件）

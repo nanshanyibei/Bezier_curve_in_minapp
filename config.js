@@ -25,20 +25,10 @@ module.exports = {
   // 边界文件本地缓存保留个数（LRU，存于 USER_DATA_PATH/geo/）
   GEO_CACHE_MAX: 8,
 
-  // CloudBase 通用版（腾讯云控制台开通，tcb.cloud.tencent.com）
-  // 免费体验版 3000 资源点/月。envId 在控制台「环境-概览」页复制，替换占位符后生效。
-  // 未配置 / 未构建 npm 时，云端功能自动降级为纯本地模式。
-  CLOUDBASE_ENV: 'eligible-gorilla-d4e0n4kdadfbdc4',
-
-  // 云函数网关（HTTP 网关默认域名，已挂 /wxauth 路由）
-  // 客户端不直连云函数（匿名身份被 EXCEED_AUTHORITY 拒绝），改走这个公网入口，
-  // 鉴权由 wxauth 自己的 HMAC token 负责。
-  //
-  // ⚠️ 默认域名 *.app.tcloudbase.com 无法稳定加入微信 request 合法域名白名单，
-  //   会导致真机关掉调试模式后所有请求 fail（url not in domain list）。
-  //   上线/真机常态使用前，必须在腾讯云给网关绑定一个「已备案」的自定义域名，
-  //   然后把下面这一行换成 https://你的域名 —— 全项目只改这一处。
-  CLOUD_GATEWAY_BASE: 'https://eligible-gorilla-d4e0n4kdadfbdc4-1311813133.ap-shanghai.app.tcloudbase.com',
+  // 微信云开发环境（2026-11 迁移，旧腾讯云 CloudBase 环境废弃，见 docs/migrate-to-wxcloud.md）
+  // 环境在 mp.weixin.qq.com「云服务-云开发」创建，wx.cloud 直连，免域名免备案。
+  // 未配置时云端功能自动降级为纯本地模式。
+  WX_CLOUD_ENV: 'ai-walk-d6g6stcxs36a8e427',
 
   // 景点生成类请求超时（模型生成 15~30s，微信 wx.request 上限 60s）
   GEN_TIMEOUT: 55000,

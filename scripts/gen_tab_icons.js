@@ -57,6 +57,13 @@ const icons = {
     const dome = body < 0 && y > 47;
     return head < 0 || dome ? -1 : 1;
   },
+  // 对话: solid speech bubble — filled rounded rect + thick tail
+  chat(x, y) {
+    const bubble = sdRoundRect(x, y, 40.5, 37, 26, 19, 13);
+    const tailL = sdSegment(x, y, 31, 52, 25, 65) - 7;
+    const tailR = sdSegment(x, y, 36, 49, 25, 65) - 7;
+    return Math.min(bubble, tailL, tailR);
+  },
 };
 
 // per-icon cutouts (negative space) and additive details
@@ -72,10 +79,19 @@ const holes = {
   travel(x, y) {
     return sdCircle(x, y, 40.5, 31, 7);
   },
+  chat(x, y) {
+    // 三个省略点
+    return Math.min(
+      sdCircle(x, y, 30.5, 37, 3.4),
+      sdCircle(x, y, 40.5, 37, 3.4),
+      sdCircle(x, y, 50.5, 37, 3.4)
+    );
+  },
 };
 const holeHalfWidth = {
   diary: 1.8,
   travel: 0, // fill hole
+  chat: 0,
 };
 
 // ---------- PNG encode ----------
