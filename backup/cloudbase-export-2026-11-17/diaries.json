@@ -1,0 +1,13 @@
+{
+  "_meta": {
+    "exportedAt": "2026-11-17T16:53:00+08:00",
+    "source": "CloudBase env eligible-gorilla-d4e0n4kdadfbdc4",
+    "collection": "diaries",
+    "count": 2,
+    "note": "pgdoc 返回结构为 {_id, data:{...}}；_id 规则 = {owner}_{date}"
+  },
+  "docs": [
+    {"_id": "oQb-a5YTqlhDG5iqO-FZb8yjV160_2026-11-06", "data": {"date": "2026-11-06", "owner": "oQb-a5YTqlhDG5iqO-FZb8yjV160", "text": "今天是正常的一天吧", "updatedAt": 1793958445842}},
+    {"_id": "oQb-a5Rf2m27rcFrBoIfvZzKQbo4_2026-11-13", "data": {"date": "2026-11-13", "owner": "oQb-a5Rf2m27rcFrBoIfvZzKQbo4", "text": "佳佳", "updatedAt": 1794533157752}}
+  ]
+}

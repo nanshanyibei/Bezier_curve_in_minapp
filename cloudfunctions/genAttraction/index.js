@@ -2,12 +2,12 @@
  * 云函数 genAttraction：按需生成景点推荐
  *
  * 入参（HTTP 网关路由 /genAttraction，body 即业务参数）：
- *   { adcode, name, parent?, token, llmKey? }
+ *   { adcode, name, parent?, token }
  * 流程：校验身份 → 已有 llm 数据则直接返回 → LLM 生成 5 条 → 校验 → 写 attractions → 返回全量
  *
  * 环境变量：
  *   WX_APPID / WX_SECRET   与 wxauth 同值；配置后强制校验 token（防止公网裸调烧额度）
- *   SILICONFLOW_KEY        推荐配置；未配置时退用请求体里的 llmKey（开发期过渡，勿长期依赖）
+ *   SILICONFLOW_KEY        必配。key 只在服务端，客户端不再透传（2026-11 起移除 llmKey 入参）
  *   SILICONFLOW_MODEL      可选
  *
  * pgdoc 两个坑（与 wxauth 同源，已处理）：
@@ -62,9 +62,9 @@ function verifyToken(token) {
   }
 }
 
-/** 应用密钥：环境变量优先，其次请求体透传（开发期过渡） */
-function llmKey(e) {
-  return process.env.SILICONFLOW_KEY || (e && e.llmKey) || '';
+/** 应用密钥：只从环境变量取，不接受客户端透传（避免 key 泄漏到前端/日志） */
+function llmKey() {
+  return process.env.SILICONFLOW_KEY || '';
 }
 
 /** 剥掉 pgdoc 的 data 包装 */
@@ -196,8 +196,11 @@ exports.main = async (event) => {
   const parent = e.parent;
   if (!adcode || !name) return { code: 1, msg: '缺少 adcode/name' };
 
-  const key = llmKey(e);
-  if (!key) return { code: 2, msg: 'NO_LLM_KEY', list: [] };
+  const key = llmKey();
+  if (!key) {
+    console.error('[genAttraction] 未配置环境变量 SILICONFLOW_KEY');
+    return { code: 2, msg: 'NO_LLM_KEY', list: [] };
+  }
 
   try {
     // 已有足够的 llm 数据就不再调模型（省额度，也防重复触发）

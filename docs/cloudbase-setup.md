@@ -118,8 +118,9 @@ pgdoc 模式下集合固定落在 `pgdoc_data` schema，编辑器里不需要指
 
 | Key | 值 |
 |---|---|
-| `WX_APPID` | `wx19971a62016469bf` |
+| `WX_APPID` | `wx5bf7979372d41257` |
 | `WX_SECRET` | 小程序 AppSecret（只在服务端，不进代码仓库） |
+| `MIGRATE_KEY` | 可选。仅换 AppID 迁移期临时配置，用于开启 `owners` / `migrate` 入口；迁移完删掉即关闭 |
 
 接口：
 
@@ -161,7 +162,7 @@ https://eligible-gorilla-d4e0n4kdadfbdc4-1311813133.ap-shanghai.app.tcloudbase.c
 
 | Key | 值 | 说明 |
 |---|---|---|
-| `WX_APPID` | `wx19971a62016469bf` | 与 wxauth 同值 |
+| `WX_APPID` | `wx5bf7979372d41257` | 与 wxauth 同值 |
 | `WX_SECRET` | 小程序 AppSecret | 配置后**强制校验 token**，防止公网裸调烧 LLM 额度 |
 | `SILICONFLOW_KEY` | 硅基流动 Key | 可空；空时客户端透传自己本地配置的 key（开发期过渡） |
 | `SILICONFLOW_MODEL` | 可选 | 默认 `deepseek-ai/DeepSeek-V4-Flash`（2026-11-12 选型 ¥1.5/¥4.5；旧 `DeepSeek-V3-0324` 已下线） |
@@ -212,6 +213,57 @@ manageFunctions(updateFunctionCode, functionName='genAttraction',
 - [ ] 点省份弹层出现「当地推荐」区，有云端种子数据（如甘肃→敦煌莫高窟）
 - [ ] 点「AI 补充」返回 5 条景点，再点命中缓存（同一 adcode 不再调 LLM）
 - [ ] 配好 `SILICONFLOW_KEY` 后，客户端即使清空本地 key 也能生成（验证纯服务端代理）
+
+## 七、换小程序 AppID 与数据迁移
+
+openid 与 AppID 绑定，换 AppID 后旧 openid 失效；两个 AppID 的 openid 之间**没有换算关系**，所以只能在拿到新 openid 后按显式映射搬数据。数据都在 `marks/diaries/chats/memories`，`_id = {owner}_{业务id}`，迁移要同时改 `_id` 与 `data.owner`。
+
+### 7.1 必改项
+
+| 位置 | 内容 |
+|---|---|
+| `project.config.json` | `appid` |
+| 云函数 `wxauth` | `WX_APPID`、`WX_SECRET` |
+| 云函数 `genAttraction` | `WX_APPID`、`WX_SECRET`（漏改 → AI 补充全 401） |
+| 小程序后台 | request 合法域名（网关域名、`*.api.tcloudbasegateway.com`、`file.geojson.cn`） |
+
+CloudBase 环境本身与 AppID 无关，可继续复用。
+
+### 7.2 迁移步骤
+
+1. 给 `wxauth` 配 `MIGRATE_KEY=<随机串>` 并重新部署（`tcb fn deploy wxauth --dir cloudfunctions/wxauth --env <envId>`，或开发者工具右键「上传并部署」）。
+2. 用新 AppID 登录一次小程序，开发者工具 console 里 `[cb] 就绪: {... uid:"o..."}` 就是新 openid。
+3. 摸底旧数据分布：
+
+```powershell
+$GW = 'https://eligible-gorilla-d4e0n4kdadfbdc4-1311813133.ap-shanghai.app.tcloudbase.com/wxauth'
+$KEY = '<MIGRATE_KEY>'
+Invoke-RestMethod -Uri $GW -Method POST -ContentType 'application/json' -Body (@{ action='owners'; key=$KEY } | ConvertTo-Json)
+```
+
+4. 先空跑（`dryRun` 默认 true，不写库）：
+
+```powershell
+$body = @{
+  action = 'migrate'; key = $KEY; dryRun = $true
+  mapping = @(@{ from = '<旧openid>'; to = '<新openid>' })
+} | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Uri $GW -Method POST -ContentType 'application/json' -Body $body
+```
+
+5. 确认 `moved` 条数无误后正式执行（`deleteOld=true` 会删旧文档，先有备份再开）：
+
+```powershell
+$body = @{
+  action = 'migrate'; key = $KEY; dryRun = $false; deleteOld = $true
+  mapping = @(@{ from = '<旧openid>'; to = '<新openid>' })
+} | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Uri $GW -Method POST -ContentType 'application/json' -Body $body
+```
+
+6. 迁移完删掉 `MIGRATE_KEY` 并重新部署，入口即关闭。
+
+`memories` 里的照片会按 `/memories/{旧openid}/` → `/memories/{新openid}/` 复制并改写 `fileID`，旧文件不删（`failed` 计数非 0 时说明有文件没搬成功，需要人工处理）。
 
 ## 费用预估
 

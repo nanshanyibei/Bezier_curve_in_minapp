@@ -32,8 +32,16 @@ module.exports = {
 
   // 云函数网关（HTTP 网关默认域名，已挂 /wxauth 路由）
   // 客户端不直连云函数（匿名身份被 EXCEED_AUTHORITY 拒绝），改走这个公网入口，
-  // 鉴权由 wxauth 自己的 HMAC token 负责。上线前需在微信后台配 request 合法域名。
+  // 鉴权由 wxauth 自己的 HMAC token 负责。
+  //
+  // ⚠️ 默认域名 *.app.tcloudbase.com 无法稳定加入微信 request 合法域名白名单，
+  //   会导致真机关掉调试模式后所有请求 fail（url not in domain list）。
+  //   上线/真机常态使用前，必须在腾讯云给网关绑定一个「已备案」的自定义域名，
+  //   然后把下面这一行换成 https://你的域名 —— 全项目只改这一处。
   CLOUD_GATEWAY_BASE: 'https://eligible-gorilla-d4e0n4kdadfbdc4-1311813133.ap-shanghai.app.tcloudbase.com',
+
+  // 景点生成类请求超时（模型生成 15~30s，微信 wx.request 上限 60s）
+  GEN_TIMEOUT: 55000,
 
   // 景点本地缓存有效期（毫秒，7 天）
   ATTRACTION_CACHE_TTL: 7 * 24 * 3600 * 1000

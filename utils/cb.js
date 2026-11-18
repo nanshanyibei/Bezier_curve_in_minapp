@@ -424,89 +424,94 @@ function fetchAttractions(adcode, fallbackCode, limit) {
 }
 
 /* @dev:begin */
-/** 与服务端 genAttraction 保持同一套提示词（云函数独立打包，无法共用文件，改动需两边同步） */
-function buildGenPrompt(adcode, scope) {
-  return '你是旅行顾问。请推荐 ' + scope + '（行政区划代码 ' + adcode + '）最有代表性的 5 个景点或体验，'
-    + '每个包含字段：name（名称，不超过15字）、desc（一句话亮点介绍，不超过60字，突出特色，不要套话）、'
-    + 'bestMonths（最适合游玩的月份，格式如 "4-6,9-10"，全年皆宜写 "四季皆宜"）、'
-    + 'tags（1-3个标签，从 自然/人文/美食/夜景观赏/亲子/徒步/海岛/古镇/冰雪/温泉 中选）。'
-    + '只输出 JSON 数组，不要任何其他文字。';
-}
-
-/** 本地已配置的 LLM key（开发期在助手设置页填过才有） */
-function readLocalLlmKey() {
-  try {
-    const ai = require('./ai');
-    return ai.hasApiKey() ? ai.getApiKey() : '';
-  } catch (e) {
-    return '';
-  }
-}
-
 /**
- * 本地兜底生成：云函数没配 SILICONFLOW_KEY 或网关失败时，
- * 用用户在本地设置页填过的 key 直连 LLM（开发期路径）。
+ * 网关 POST（严格版）：失败直接 reject 并带可读原因。
+ * 与 gwRequest 的区别：gwRequest 网络失败时 resolve(null) 让业务静默降级，
+ * 这里必须把原因抛到调用方，UI 才能告诉用户到底哪一步断了。
  */
-function localGen(adcode, scope) {
-  let ai;
-  try { ai = require('./ai'); } catch (e) { return Promise.resolve([]); }
-  if (!ai.hasApiKey()) return Promise.resolve([]);
-  return ai.chatCompletion({
-    messages: [{ role: 'user', content: buildGenPrompt(adcode, scope) }],
-    temperature: 0.8,
-    maxTokens: 1200
-  }).then((text) => {
-    const s = String(text || '');
-    const a = s.indexOf('[');
-    const b = s.lastIndexOf(']');
-    if (a < 0 || b <= a) return [];
-    const arr = JSON.parse(s.slice(a, b + 1));
-    const list = (Array.isArray(arr) ? arr : []).filter((it) => (
-      it && typeof it.name === 'string' && it.name.trim()
-      && typeof it.desc === 'string' && it.desc.trim()
-    )).slice(0, 5).map((it) => ({
-      name: it.name.trim().slice(0, 30),
-      desc: it.desc.trim().slice(0, 200),
-      img: '',
-      bestMonths: typeof it.bestMonths === 'string' ? it.bestMonths.slice(0, 30) : '',
-      tags: Array.isArray(it.tags) ? it.tags.slice(0, 4).map((t) => String(t).slice(0, 10)) : []
-    }));
-    if (list.length) writeCache(adcode, list);
-    return list;
-  }).catch((err) => {
-    console.error('[cb] 本地生成失败:', (err && err.message) || err);
-    return [];
+function gwPostStrict(fnName, payload, timeoutMs) {
+  if (!GATEWAY_BASE) return Promise.reject(new Error('未配置云端网关'));
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: GATEWAY_BASE + '/' + fnName,
+      method: 'POST',
+      header: { 'content-type': 'application/json' },
+      data: payload || {},
+      timeout: timeoutMs || config.GEN_TIMEOUT,
+      success: (res) => {
+        let body = res && res.data;
+        if (typeof body === 'string') {
+          try { body = JSON.parse(body); } catch (e) { body = null; }
+        }
+        if (!body || typeof body !== 'object') {
+          reject(new Error('网关返回异常（HTTP ' + (res && res.statusCode) + '）'));
+          return;
+        }
+        resolve(body);
+      },
+      fail: (err) => reject(new Error(gwErrText(err)))
+    });
   });
 }
 
-/** 调云函数按需生成景点（LLM 在服务端，key 不落客户端）
- *  走网关而非 SDK callFunction：匿名身份调 /v1/functions 会被 EXCEED_AUTHORITY 拒。
- *  带 token 供服务端鉴权；本地有 key 时一并透传（服务端配了环境变量会忽略）。
- *  服务端未配 key（code 2）或网关不可用时，退回本地直连。 */
+/** wx.request 的 fail 归类成人能看懂的原因 */
+function gwErrText(err) {
+  const m = String((err && err.errMsg) || '');
+  if (/url not in domain list/i.test(m)) {
+    return '网关域名未加入 request 合法域名（开发版可临时开调试模式）';
+  }
+  if (/timeout/i.test(m)) return '请求超时，稍后再试';
+  if (/net::|ERR_CONNECTION|ERR_NAME/i.test(m)) return '网络连接失败，检查手机网络';
+  if (/ssl|handshake/i.test(m)) return 'HTTPS 证书校验失败';
+  return m || '网络请求失败';
+}
+
+/** 一次网关调用（payload 里带当前 token） */
+function genRequest(adcode, regionName, parentName) {
+  return gwPostStrict('genAttraction', {
+    adcode: adcode,
+    name: regionName,
+    parent: parentName || '',
+    token: _token
+  });
+}
+
+/**
+ * 按需生成景点推荐：唯一链路是云函数 genAttraction。
+ * LLM 的 key 只存在云函数环境变量里，客户端不持有、不透传。
+ * 走网关而非 SDK callFunction：匿名身份调 /v1/functions 会被 EXCEED_AUTHORITY 拒。
+ * 注意：超时按 config.GEN_TIMEOUT（55s）算，模型生成本身就要 15~30s，
+ * 沿用 gwRequest 的 15s 默认值会稳定超时。
+ */
 function genAttractions(adcode, regionName, parentName) {
-  const scope = parentName ? parentName + regionName : regionName;
   return ready().then(() => {
-    if (!gwReady()) return localGen(adcode, scope);
-    const payload = {
-      adcode: adcode,
-      name: regionName,
-      parent: parentName || '',
-      token: _token
-    };
-    const localKey = readLocalLlmKey();
-    if (localKey) payload.llmKey = localKey;
-    return gwRequest('genAttraction', payload).then((r) => {
-      if (r && r.code === 0 && Array.isArray(r.list) && r.list.length) {
-        writeCache(adcode, r.list);
-        return r.list;
-      }
-      if (r && r.code === 401) {
-        console.warn('[cb] 景点生成鉴权失败，改用本地 key');
-        return localGen(adcode, scope);
-      }
-      if (r && r.code === 2) console.warn('[cb] 云函数未配置 SILICONFLOW_KEY，改用本地 key');
-      return localGen(adcode, scope);
-    });
+    if (!gwReady()) return Promise.reject(new Error('未配置云端网关'));
+    return genRequest(adcode, regionName, parentName)
+      .then((r) => {
+        // token 30 天过期：清掉重登一次再试
+        if (r && r.code === 401) {
+          _token = '';
+          try { wx.removeStorageSync(TOKEN_STORAGE); } catch (e) { /* ignore */ }
+          return loginByWx().then(() => genRequest(adcode, regionName, parentName));
+        }
+        return r;
+      })
+      .then((r) => {
+        if (r && r.code === 0 && Array.isArray(r.list) && r.list.length) {
+          writeCache(adcode, r.list);
+          return r.list;
+        }
+        if (r && r.code === 2) throw new Error('服务端未配置 SILICONFLOW_KEY');
+        if (r && r.code === 401) throw new Error('登录态失效，请重进小程序再试');
+        throw new Error((r && r.msg) || '生成失败');
+      });
+  }).catch((err) => {
+    // 重登失败时的原始文案太绕，换成能指导操作的
+    const m = (err && err.message) || '';
+    if (/网关登录失败|wx\.login/.test(m)) {
+      throw new Error('网关登录失败，检查云函数 WX_APPID/WX_SECRET 与网关域名');
+    }
+    throw err;
   });
 }
 /* @dev:end */

@@ -1,6 +1,9 @@
 /**
  * OpenAI 兼容 /chat/completions 封装（开发期直连硅基流动）
  * API Key 存本地 storage：wx.setStorageSync('llm.apiKey', 'sk-xxx')
+ *
+ * @deprecated 2026-11 起景点生成只走云函数 genAttraction，key 只在服务端环境变量里。
+ *   本文件当前无任何调用点，仅留作本地起脚本做提示词调试；生产构建由 scripts/build.js 剔除。
  */
 const config = require('../config');
 

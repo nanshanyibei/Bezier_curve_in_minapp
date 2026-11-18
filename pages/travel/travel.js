@@ -707,20 +707,24 @@ Page({
   },
 
   /* @dev:begin */
-  /** 云端补充更多：云函数 LLM 生成并写库，成功后刷新弹层（服务端无 key 时自动退回本地直连） */
+  /** 云端补充更多：云函数 LLM 生成并写库，成功后刷新弹层。失败必须说清原因，别再静默吞掉 */
   onGenAttractions() {
     const region = this._sheetRegion;
     if (!region || !this.data.sheet || this.data.sheet.spotsLoading) return;
     if (!cb.cloudReady()) {
-      wx.showToast({ title: '未配置云端，暂时无法补充', icon: 'none' });
+      wx.showToast({ title: '未配置云端网关', icon: 'none' });
       return;
     }
     this.setData({ 'sheet.spotsLoading': true });
     cb.genAttractions(String(region.adcode), region.name, this.parentName()).then((list) => {
       if (this._sheetRegion !== region) return;
-      const spots = list.length ? list : this.data.sheet.spots;
-      this.setData({ 'sheet.spots': spots, 'sheet.spotsLoading': false });
-      if (!list.length) wx.showToast({ title: '生成失败，稍后再试', icon: 'none' });
+      this.setData({ 'sheet.spots': list, 'sheet.spotsLoading': false });
+    }).catch((err) => {
+      if (this._sheetRegion !== region) return;
+      const msg = (err && err.message) || '生成失败';
+      console.error('[travel] 景点补充失败:', msg);
+      this.setData({ 'sheet.spotsLoading': false });
+      wx.showModal({ title: '补充失败', content: msg, showCancel: false, confirmText: '知道了' });
     });
   },
   /* @dev:end */
