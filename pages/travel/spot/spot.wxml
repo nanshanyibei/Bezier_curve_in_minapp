@@ -1,0 +1,69 @@
+<view class="page spot">
+  <view wx:if="{{err}}" class="spot-empty">{{err}}</view>
+
+  <block wx:else>
+    <!-- 主图：有图用图，无图用类型渐变 + 首字，不留破图 -->
+    <view class="hero hero-{{heroTone}}">
+      <image wx:if="{{img}}" class="hero-img" src="{{img}}" mode="aspectFill" />
+      <text wx:else class="hero-ph">{{initial}}</text>
+    </view>
+
+    <view class="head">
+      <view class="head-name">{{name}}</view>
+      <view class="head-meta">
+        <text class="badge badge-5a">5A</text>
+        <text wx:for="{{typeTags}}" wx:key="*this" class="badge">{{item}}</text>
+        <text class="head-dot">·</text>
+        <text class="head-sub">{{city}}{{year ? ' · ' : ''}}{{year}}</text>
+      </view>
+      <view wx:if="{{oneline}}" class="oneline">{{oneline}}</view>
+    </view>
+
+    <view class="acts">
+      <view class="act {{mark === 'visited' ? 'act-on' : ''}}" bindtap="onMark" data-status="visited">
+        <text class="act-ico">✓</text><text>去过</text>
+      </view>
+      <view class="act {{mark === 'want' ? 'act-on' : ''}}" bindtap="onMark" data-status="want">
+        <text class="act-ico">☆</text><text>想去</text>
+      </view>
+    </view>
+
+    <view wx:if="{{tags.length}}" class="tagline">
+      <text wx:for="{{tags}}" wx:key="*this" class="tag">{{item}}</text>
+    </view>
+
+    <view wx:if="{{highlights.length}}" class="card">
+      <view class="card-title">看点</view>
+      <view wx:for="{{highlights}}" wx:key="*this" class="hl">
+        <text class="hl-i">{{index + 1}}</text>
+        <text class="hl-t">{{item}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{intro}}" class="card">
+      <view class="card-title">简介</view>
+      <view class="intro">{{intro}}</view>
+    </view>
+
+    <view wx:if="{{info.length}}" class="card">
+      <view class="card-title">实用信息</view>
+      <view wx:for="{{info}}" wx:key="k" class="row">
+        <text class="row-k">{{item.k}}</text>
+        <text class="row-v">{{item.v}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{tips}}" class="card card-tip">
+      <view class="card-title">提醒</view>
+      <view class="intro">{{tips}}</view>
+    </view>
+
+    <view wx:if="{{!hasContent && !loading}}" class="spot-none">
+      这家景区还没有详细介绍，上面的名称、城市和评定年份来自官方名录。内容会按省份持续补充，下拉可刷新。
+    </view>
+
+    <view wx:if="{{updatedAt}}" class="foot">
+      内容更新于 {{updatedAt}} · 门票与开放时间仅供参考，以景区官方公告为准
+    </view>
+  </block>
+</view>

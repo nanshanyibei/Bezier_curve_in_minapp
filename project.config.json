@@ -55,6 +55,10 @@
         "value": "backup"
       },
       {
+        "type": "folder",
+        "value": "content"
+      },
+      {
         "type": "file",
         "value": "skills-lock.json"
       },

@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "景区详情",
+  "navigationBarBackgroundColor": "#1e1e24",
+  "navigationBarTextStyle": "white",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#16161c",
+  "backgroundTextStyle": "light",
+  "usingComponents": {}
+}

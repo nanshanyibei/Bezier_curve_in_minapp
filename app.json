@@ -5,6 +5,7 @@
     "pages/travel/list/list",
     "pages/travel/memory/memory",
     "pages/travel/memory/edit/edit",
+    "pages/travel/spot/spot",
     "pages/assistant/assistant",
     "pages/insight/insight",
     "pages/my/my",

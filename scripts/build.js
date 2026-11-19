@@ -35,9 +35,13 @@ const PROD_PAGES = [
   'pages/travel/list/list',
   'pages/travel/memory/memory',
   'pages/travel/memory/edit/edit',
+  'pages/travel/spot/spot',
   'pages/my/my',
   'pages/my/privacy/privacy'
 ];
+
+/** 体积门禁（KB）：主包 2MB 上限，留 10% 余量；超了说明有静态数据塞错位置 */
+const SIZE_LIMIT_KB = 1840;
 
 /** 文本文件后缀（参与标记剥离与关键词校验） */
 const TEXT_EXT = ['.js', '.json', '.wxml', '.wxss'];
@@ -180,15 +184,30 @@ function buildProd() {
     process.exit(1);
   }
 
-  const size = (() => {
+  function dirSize(dir) {
+    if (!fs.existsSync(dir)) return 0;
     let total = 0;
-    walk(OUT, (f) => { total += fs.statSync(f).size; });
-    return (total / 1024).toFixed(1);
-  })();
+    walk(dir, (f) => { total += fs.statSync(f).size; });
+    return total;
+  }
+  const totalSize = dirSize(OUT);
+  const subSize = dirSize(path.join(OUT, 'subpackages'));
+  const mainSize = totalSize - subSize;
+  const kb = (n) => (n / 1024).toFixed(1);
+
+  if (mainSize / 1024 > SIZE_LIMIT_KB) {
+    log('');
+    log('✗ 主包体积超限：' + kb(mainSize) + ' KB > ' + SIZE_LIMIT_KB + ' KB');
+    log('  静态内容请放云端集合（attraction_details），图片请走云存储，不要进包。');
+    process.exit(1);
+  }
 
   log('');
   log('✓ 生产包已生成：' + path.relative(ROOT, OUT).replace(/\\/g, '/'));
-  log('  页面：' + PROD_PAGES.length + ' 个 · 体积：' + size + ' KB');
+  log('  页面：' + PROD_PAGES.length + ' 个');
+  log('  主包：' + kb(mainSize) + ' KB / 上限 ' + SIZE_LIMIT_KB + ' KB');
+  log('  分包：' + kb(subSize) + ' KB');
+  log('  合计：' + kb(totalSize) + ' KB');
   log('  下一步：微信开发者工具 → 导入项目 → 选择 dist/prod 目录 → 上传');
 }
 

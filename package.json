@@ -16,8 +16,5 @@
   "bugs": {
     "url": "https://github.com/nanshanyibei/Bezier_curve_in_minapp/issues"
   },
-  "homepage": "https://github.com/nanshanyibei/Bezier_curve_in_minapp#readme",
-  "dependencies": {
-    "@cloudbase/js-sdk": "^3.11.0"
-  }
+  "homepage": "https://github.com/nanshanyibei/Bezier_curve_in_minapp#readme"
 }

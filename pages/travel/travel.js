@@ -5,6 +5,8 @@ const travelStore = require('../../utils/travelStore');
 const routeStore = require('../../utils/routeStore');
 const memoryStore = require('../../utils/memoryStore');
 const attractionLayer = require('../../utils/attractionLayer');
+const attrContent = require('../../utils/attrContent');
+const spotStore = require('../../utils/spotStore');
 const cb = require('../../utils/cb');
 const seed = require('../../assets/data/attractions-seed');
 
@@ -72,6 +74,10 @@ Page({
         this.draw();
       }
     });
+    // 景区级标记（去过/想去）同步，回来后名录徽标才准
+    spotStore.pullCloud().then((r) => {
+      if (r && r.changed) this._refreshSheet();
+    });
   },
 
   onReady() {
@@ -87,6 +93,8 @@ Page({
     this.applyPendingFocus();
     // 弹层还开着时（从回忆册/编辑页返回），刷新回忆摘要，避免停在旧空态
     if (this.data.sheet && this._sheetRegion) this.loadMemories(this._sheetRegion);
+    // 从景区详情页返回：标记可能已变，名录徽标跟着刷
+    if (this.data.attrSheet) this._refreshSheet();
   },
 
   onHide() {
@@ -318,26 +326,76 @@ Page({
 
   /** 统一渲染成按城市分组的名录弹层 */
   _showSpots(adcode, title, list) {
-    const map = {};
-    list.forEach((s) => {
-      const c = s.city || '其他';
-      (map[c] || (map[c] = [])).push(s);
-    });
-    const groups = Object.keys(map).map((city) => ({
-      city: city,
-      items: map[city]
-        .sort((a, b) => parseInt(b.year, 10) - parseInt(a.year, 10))
-        .map((s) => ({ name: s.name, year: s.year }))
-    })).sort((a, b) => b.items.length - a.items.length);
+    this._sheetList = list;
+    // 单体聚点没传省级 adcode，用当前图层省份补上（补内容、标记都要靠它）
+    this._sheetProv = String(adcode || (this._layer && this._layer.adcode) || '');
 
     this.setData({
       attrSheet: {
         adcode: adcode,
         provName: title,
         count: list.length,
-        groups: groups,
+        groups: this._buildGroups(list),
         noMap: !adcode
       }
+    });
+
+    if (this._sheetProv) this._loadSheetContent(this._sheetProv);
+  },
+
+  /**
+   * 名录分组：包内骨架立刻可渲染，oneline / 标记取本地缓存（同步，零请求）。
+   * 内容还没到就留空，等云端回来再原地补，不重排、不闪烁。
+   */
+  _buildGroups(list) {
+    const prov = this._sheetProv || '';
+    const map = {};
+    list.forEach((s) => {
+      const c = s.city || '其他';
+      (map[c] || (map[c] = [])).push(s);
+    });
+    return Object.keys(map).map((city) => ({
+      city: city,
+      items: map[city]
+        .sort((a, b) => parseInt(b.year, 10) - parseInt(a.year, 10))
+        .map((s) => {
+          const c = attrContent.cachedSpot(prov, s.name) || {};
+          return {
+            name: s.name,
+            year: s.year,
+            oneline: c.oneline || '',
+            mark: spotStore.get(prov, s.name)
+          };
+        })
+    })).sort((a, b) => b.items.length - a.items.length);
+  },
+
+  /** 异步补内容：先吃缓存，必要时静默刷新（6 小时内不重复请求） */
+  _loadSheetContent(prov) {
+    attrContent.load(prov).then((d) => {
+      if (d) this._refreshSheet();
+      return attrContent.refresh(prov);
+    }).then((d) => {
+      if (d) this._refreshSheet();
+    }).catch(() => { /* 没内容就保持骨架，页面已有降级文案 */ });
+  },
+
+  /** 用最新缓存重建当前弹层的分组（内容到位 / 标记变化后调用） */
+  _refreshSheet() {
+    if (!this.data.attrSheet || !this._sheetList) return;
+    const groups = this._buildGroups(this._sheetList);
+    if (JSON.stringify(groups) === JSON.stringify(this.data.attrSheet.groups)) return;
+    this.setData({ 'attrSheet.groups': groups });
+  },
+
+  /** 点名录条目 → 景区详情页 */
+  onSpotTap(e) {
+    const ds = (e.currentTarget && e.currentTarget.dataset) || {};
+    const prov = String(ds.prov || this._sheetProv || '');
+    const name = ds.name;
+    if (!prov || !name) return;
+    wx.navigateTo({
+      url: '/pages/travel/spot/spot?prov=' + prov + '&name=' + encodeURIComponent(name)
     });
   },
 

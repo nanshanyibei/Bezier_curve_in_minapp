@@ -89,11 +89,61 @@
 
 .attr-item {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16rpx;
-  padding: 14rpx 0;
+  align-items: center;
+  gap: 12rpx;
+  padding: 18rpx 0;
   border-bottom: 1rpx solid var(--border);
+}
+
+.attr-item-hover {
+  opacity: 0.6;
+}
+
+.attr-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.attr-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.attr-badge {
+  flex: none;
+  font-size: 18rpx;
+  line-height: 1;
+  padding: 6rpx 10rpx;
+  border-radius: 6rpx;
+}
+
+.attr-badge-v {
+  color: var(--green);
+  background: rgba(126, 212, 145, 0.14);
+}
+
+.attr-badge-w {
+  color: var(--orange);
+  background: rgba(240, 179, 94, 0.14);
+}
+
+/* 一句话点题：有内容才出现，没有就不占高度 */
+.attr-oneline {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attr-arrow {
+  flex: none;
+  font-size: 32rpx;
+  line-height: 1;
+  color: var(--border);
 }
 
 .attr-group:last-child .attr-item:last-child {
@@ -101,7 +151,6 @@
 }
 
 .attr-name {
-  flex: 1;
   font-size: 28rpx;
   color: var(--text);
 }
