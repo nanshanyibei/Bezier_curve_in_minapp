@@ -85,6 +85,8 @@ Page({
     if (this._renderer) this.draw();
     // 从足迹清单返回时带定位请求
     this.applyPendingFocus();
+    // 弹层还开着时（从回忆册/编辑页返回），刷新回忆摘要，避免停在旧空态
+    if (this.data.sheet && this._sheetRegion) this.loadMemories(this._sheetRegion);
   },
 
   onHide() {

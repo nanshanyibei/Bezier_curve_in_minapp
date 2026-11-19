@@ -2,7 +2,7 @@
 
   <!-- 顶栏 -->
   <view class="topbar">
-    <view class="text-dim">{{hasKey ? '软考备考助手 · 流式' : '未配置 API Key，请到「我的」页设置'}}</view>
+    <view class="text-dim">{{hasKey ? '软考备考助手 · 本机 Key' : '软考备考助手 · 云端代理'}}</view>
     <view class="topbar-btns">
       <text class="topbar-btn" bindtap="onClear">清空</text>
     </view>
@@ -53,7 +53,7 @@
     <textarea class="input" value="{{input}}" bindinput="onInput"
               confirm-type="send" bindconfirm="onSend"
               auto-height maxlength="-1" adjust-position
-              placeholder="{{hasKey ? '问点什么，如：可用度怎么算？' : '请先到「我的」页配置 API Key'}}"
+              placeholder="问点什么，如：可用度怎么算？"
               disabled="{{busy}}" />
     <button wx:if="{{busy}}" class="btn-danger stop-btn" bindtap="stop">停止</button>
     <button wx:else class="btn send-btn" disabled="{{!canSend}}" bindtap="onSend">发送</button>

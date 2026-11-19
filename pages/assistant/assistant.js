@@ -1,4 +1,3 @@
-const { streamChat } = require('../../utils/sse');
 const ai = require('../../utils/ai');
 const cb = require('../../utils/cb');
 const config = require('../../config');
@@ -111,31 +110,39 @@ Page({
     this.startedAt = Date.now();
     this.startPump();
 
-    this.stream = streamChat({
-      model: config.CHAT_MODEL,
-      maxTokens: 2048,
-      messages: this.buildContext(text),
-      onDelta: (t) => { this.fullBuf += t; },
-      onThinking: (t) => {
-        this.thinkingBuf += t;
-        this.pendingThinking += t;
-      },
-      onDone: (info) => {
-        this.done = true;
-        this.replyInfo = info;
-        // 思考文本直接整段上屏（更新频率低）
-        if (this.replyIndex >= 0) {
-          this.setData({ ['messages[' + this.replyIndex + '].thinking']: this.thinkingBuf });
-        }
-        this.pendingThinking = '';
-      },
-      onError: (err) => {
-        this.done = true;
-        this.fullBuf += this.fullBuf ? '\n\n> ⚠️ ' + err.message : '⚠️ ' + err.message;
-        if (this.replyIndex >= 0) {
-          this.setData({ ['messages[' + this.replyIndex + '].thinking']: this.thinkingBuf });
-        }
-        this.pendingThinking = '';
+    // 2026-11 起改走云函数 chat 代理：免合法域名白名单，LLM Key 不下发客户端。
+    // 云函数为非流式返回，打字机由 pumpTick 逐步上屏，观感接近流式。
+    wx.cloud.callFunction({
+      name: 'chat',
+      data: {
+        messages: this.buildContext(text),
+        model: config.CHAT_MODEL,
+        maxTokens: 2048,
+        apiKey: ai.getApiKey() || undefined // 可选：「我的」页本机 Key，优先于云端环境变量
+      }
+    }).then((res) => {
+      const r = (res && res.result) || {};
+      if (r.code === 2) throw new Error('云端未配置 SILICONFLOW_KEY，请在云函数环境变量中设置');
+      if (r.code !== 0) throw new Error(r.msg || '云端对话失败');
+      this.done = true;
+      this.fullBuf = r.content || '';
+      this.thinkingBuf = r.reasoning || '';
+      if (this.replyIndex >= 0) {
+        this.setData({ ['messages[' + this.replyIndex + '].thinking']: this.thinkingBuf });
+      }
+      this.replyInfo = {
+        length: this.fullBuf.length,
+        thinkingLength: this.thinkingBuf.length,
+        elapsedMs: Date.now() - this.startedAt
+      };
+    }).catch((err) => {
+      if (this.done) return;
+      this.done = true;
+      const raw = (err && (err.errMsg || err.message)) || '云端调用失败';
+      const msg = raw.replace(/^cloud\.callFunction:fail\s*/, '');
+      this.fullBuf += this.fullBuf ? '\n\n> ⚠️ ' + msg : '⚠️ ' + msg;
+      if (this.replyIndex >= 0) {
+        this.setData({ ['messages[' + this.replyIndex + '].thinking']: this.thinkingBuf });
       }
     });
   },

@@ -112,7 +112,10 @@ function docId(adcode, name) {
 }
 
 async function save(spot) {
-  await db.collection(COL).doc(spot._id).set(spot);
+  // wx-server-sdk 的 doc().set() 必须包 { data }，且 data 里不能带 _id
+  const d = Object.assign({}, spot);
+  delete d._id;
+  await db.collection(COL).doc(spot._id).set({ data: d });
 }
 
 exports.main = async (event) => {
