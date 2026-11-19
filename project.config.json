@@ -32,6 +32,34 @@
       },
       {
         "type": "folder",
+        "value": ".agents"
+      },
+      {
+        "type": "folder",
+        "value": ".claude"
+      },
+      {
+        "type": "folder",
+        "value": ".trae"
+      },
+      {
+        "type": "folder",
+        "value": ".screenshots"
+      },
+      {
+        "type": "folder",
+        "value": ".vscode"
+      },
+      {
+        "type": "folder",
+        "value": "backup"
+      },
+      {
+        "type": "file",
+        "value": "skills-lock.json"
+      },
+      {
+        "type": "folder",
         "value": ".git"
       },
       {

@@ -28,8 +28,6 @@ Page({
     busy: false,
     canSend: false,
     scrollInto: '',
-    showKeyModal: false,
-    keyInput: '',
     hasKey: false,
     suggestions: SUGGESTIONS
   },
@@ -288,24 +286,5 @@ Page({
 
   onSuggestionTap(e) {
     this.setData({ input: e.currentTarget.dataset.text, canSend: !this.data.busy });
-  },
-
-  // ---------- Key 设置 ----------
-  onOpenKeyModal() {
-    this.setData({ showKeyModal: true, keyInput: ai.getApiKey() });
-  },
-
-  onCloseKeyModal() {
-    this.setData({ showKeyModal: false });
-  },
-
-  onKeyInput(e) {
-    this.setData({ keyInput: e.detail.value });
-  },
-
-  onSaveKey() {
-    ai.setApiKey(this.data.keyInput);
-    this.setData({ showKeyModal: false, hasKey: ai.hasApiKey() });
-    wx.showToast({ title: '已保存', icon: 'success' });
   }
 });

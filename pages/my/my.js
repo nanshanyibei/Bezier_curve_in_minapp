@@ -1,6 +1,9 @@
 const diaryStore = require('../../utils/diaryStore');
 const travelStore = require('../../utils/travelStore');
 const cb = require('../../utils/cb');
+/* @dev:begin */
+const ai = require('../../utils/ai');
+/* @dev:end */
 
 const VERSION = '1.1.0';
 
@@ -11,12 +14,20 @@ Page({
     visitedCount: 0,
     syncText: '正在连接…',
     syncOk: false,
+    /* @dev:begin */
+    hasKey: false,
+    showKeyModal: false,
+    keyInput: '',
+    /* @dev:end */
     version: VERSION
   },
 
   onShow() {
     this.refresh();
     this.refreshSync();
+    /* @dev:begin */
+    this.setData({ hasKey: ai.hasApiKey() });
+    /* @dev:end */
     // 启动同步（登录 + 云端回灌）可能晚于本页渲染，完成后补刷一次
     const p = getApp() && getApp().globalData && getApp().globalData.syncPromise;
     if (p) p.then(() => { this.refresh(); this.refreshSync(); });
@@ -58,4 +69,27 @@ Page({
       confirmText: '知道了'
     });
   }
+
+  /* @dev:begin */
+  ,
+
+  // ---------- AI Key 设置（所有 AI 调用的统一入口，key 仅存本机） ----------
+  onOpenKeyModal() {
+    this.setData({ showKeyModal: true, keyInput: ai.getApiKey() });
+  },
+
+  onCloseKeyModal() {
+    this.setData({ showKeyModal: false });
+  },
+
+  onKeyInput(e) {
+    this.setData({ keyInput: e.detail.value });
+  },
+
+  onSaveKey() {
+    ai.setApiKey(this.data.keyInput);
+    this.setData({ showKeyModal: false, hasKey: ai.hasApiKey() });
+    wx.showToast({ title: '已保存', icon: 'success' });
+  }
+  /* @dev:end */
 });

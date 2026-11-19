@@ -1,14 +1,13 @@
 /**
  * 云函数 genAttraction：按需生成景点推荐（2026-11 迁移版，wx-server-sdk）
  *
- * 入参（wx.cloud.callFunction）：{ adcode, name, parent? }
+ * 入参（wx.cloud.callFunction）：{ adcode, name, parent?, apiKey? }
  * 流程：已有足够 llm 数据直接返回 → LLM 生成 5 条 → 校验 → 写 attractions → 返回全量
  * 身份：callFunction 自带微信登录态（getWXContext().OPENID），无需 HMAC token；
  *       客户端匿名无法直调未授权云函数，公网裸调风险天然消除。
  *
- * 环境变量：
- *   SILICONFLOW_KEY        必配（云开发控制台 → 云函数 → 配置）
- *   SILICONFLOW_MODEL      可选
+ * API Key：优先用客户端透传的 e.apiKey（来自「我的」页统一设置，仅存该用户本机），
+ *          未传时回退环境变量 SILICONFLOW_KEY。
  *
  * ⚠️ config.json 已配 timeout 55s：模型生成要 15~30s，默认 3s 会稳定超时。
  */
@@ -123,9 +122,9 @@ exports.main = async (event) => {
   const parent = e.parent;
   if (!adcode || !name) return { code: 1, msg: '缺少 adcode/name' };
 
-  const key = process.env.SILICONFLOW_KEY || '';
+  const key = (e.apiKey && String(e.apiKey).trim()) || process.env.SILICONFLOW_KEY || '';
   if (!key) {
-    console.error('[genAttraction] 未配置环境变量 SILICONFLOW_KEY');
+    console.error('[genAttraction] 客户端未透传 apiKey 且环境变量 SILICONFLOW_KEY 未配置');
     return { code: 2, msg: 'NO_LLM_KEY', list: [] };
   }
 

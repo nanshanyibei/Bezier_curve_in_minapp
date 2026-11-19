@@ -37,7 +37,7 @@ Page({
 
   analyze(days) {
     if (!ai.hasApiKey()) {
-      this.setData({ error: '未配置 API Key，请先到「AI 助手」页右上角 ⚙ 设置硅基流动 Key' });
+      this.setData({ error: '未设置 API Key，请先到「我的」页「API Key 设置」填入硅基流动 Key' });
       return;
     }
     const notes = diaryStore.getRange(days);

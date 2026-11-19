@@ -413,22 +413,27 @@ function fetchAttractions(adcode, fallbackCode, limit) {
 /* @dev:begin */
 /**
  * 按需生成景点推荐：wx.cloud.callFunction('genAttraction')。
- * LLM 的 key 只存在云函数环境变量里，客户端不持有、不透传。
- * 注意：模型生成本身要 15~30s，云函数需在 config.json 配 timeout 55s 以上。
+ * key 由「我的」页设置（utils/ai 本地存储），客户端透传给云函数；云函数环境变量
+ * SILICONFLOW_KEY 作为兜底。注意：模型生成本身要 15~30s，云函数 config.json 已配 timeout 55s。
  */
-function genAttractions(adcode, regionName, parentName) {
+function genAttractions(adcode, regionName, parentName, apiKey) {
   return ready().then(() => {
     if (!envConfigured()) return Promise.reject(new Error('未配置云开发环境'));
     return wx.cloud.callFunction({
       name: 'genAttraction',
-      data: { adcode: adcode, name: regionName, parent: parentName || '' }
+      data: {
+        adcode: adcode,
+        name: regionName,
+        parent: parentName || '',
+        apiKey: apiKey || ''
+      }
     }).then((r) => {
       const res = r && r.result;
       if (res && res.code === 0 && Array.isArray(res.list) && res.list.length) {
         writeCache(adcode, res.list);
         return res.list;
       }
-      if (res && res.code === 2) throw new Error('服务端未配置 SILICONFLOW_KEY');
+      if (res && res.code === 2) throw new Error('未设置 API Key，请到「我的」页设置');
       throw new Error((res && res.msg) || '生成失败');
     }).catch((err) => {
       const m = String((err && err.errMsg) || err.message || err);

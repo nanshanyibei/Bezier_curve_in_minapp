@@ -38,6 +38,30 @@
     <text class="row-arrow">›</text>
   </view>
 
+<!-- @dev:begin -->
+  <view class="card row" bindtap="onOpenKeyModal">
+    <view class="row-main">
+      <view class="row-title">API Key 设置</view>
+      <view class="text-dim">{{hasKey ? '已设置，AI 对话 / 洞察 / 景点生成共用' : '未设置，AI 功能暂不可用'}}</view>
+    </view>
+    <text class="row-arrow" wx:if="{{hasKey}}">✓</text>
+    <text class="row-arrow" wx:else>›</text>
+  </view>
+
+  <view wx:if="{{showKeyModal}}" class="mask" bindtap="onCloseKeyModal">
+    <view class="modal" catchtap="noop">
+      <view class="card-title">API Key 设置</view>
+      <view class="text-dim modal-tip">开发期直连硅基流动，Key 仅存本机，对话 / 洞察 / 景点生成共用。请在 platform.siliconflow.cn 创建 Key。</view>
+      <input class="key-input" value="{{keyInput}}" bindinput="onKeyInput"
+             placeholder="sk-..." password />
+      <view class="modal-btns">
+        <button class="btn-ghost modal-btn" bindtap="onCloseKeyModal">取消</button>
+        <button class="btn modal-btn" bindtap="onSaveKey">保存</button>
+      </view>
+    </view>
+  </view>
+<!-- @dev:end -->
+
   <view class="card row" bindtap="onAbout">
     <view class="row-main">
       <view class="row-title">关于</view>

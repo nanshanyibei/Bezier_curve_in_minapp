@@ -29,7 +29,7 @@ function hasApiKey() {
 function chatCompletion(opts) {
   const apiKey = getApiKey();
   if (!apiKey) {
-    return Promise.reject(new Error('未配置 API Key，请在「AI 助手」页右上角设置'));
+    return Promise.reject(new Error('未设置 API Key，请到「我的」页设置'));
   }
 
   return new Promise((resolve, reject) => {

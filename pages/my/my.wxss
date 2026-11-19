@@ -68,3 +68,47 @@
   margin-top: 48rpx;
   font-size: 22rpx;
 }
+
+/* @dev:begin */
+/* AI Key 设置弹层（与 assistant 页同源） */
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+}
+
+.modal {
+  width: 80%;
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
+  border-radius: 24rpx;
+  padding: 36rpx;
+}
+
+.modal-tip {
+  margin-bottom: 24rpx;
+}
+
+.key-input {
+  background: var(--bg-card-2);
+  border: 1rpx solid var(--border);
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  color: var(--text);
+  font-size: 26rpx;
+  margin-bottom: 28rpx;
+}
+
+.modal-btns {
+  display: flex;
+  gap: 20rpx;
+}
+
+.modal-btn {
+  flex: 1;
+}
+/* @dev:end */

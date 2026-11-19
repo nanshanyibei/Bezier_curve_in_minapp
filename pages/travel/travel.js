@@ -708,11 +708,21 @@ Page({
     const region = this._sheetRegion;
     if (!region || !this.data.sheet || this.data.sheet.spotsLoading) return;
     if (!cb.cloudReady()) {
-      wx.showToast({ title: '未配置云端网关', icon: 'none' });
+      wx.showToast({ title: '未配置云开发环境', icon: 'none' });
+      return;
+    }
+    const ai = require('../../utils/ai');
+    if (!ai.hasApiKey()) {
+      wx.showModal({
+        title: '先设置 API Key',
+        content: '到「我的」页点「API Key 设置」填入硅基流动的 sk- 开头 Key，即可 AI 补充景点。',
+        showCancel: false,
+        confirmText: '知道了'
+      });
       return;
     }
     this.setData({ 'sheet.spotsLoading': true });
-    cb.genAttractions(String(region.adcode), region.name, this.parentName()).then((list) => {
+    cb.genAttractions(String(region.adcode), region.name, this.parentName(), ai.getApiKey()).then((list) => {
       if (this._sheetRegion !== region) return;
       this.setData({ 'sheet.spots': list, 'sheet.spotsLoading': false });
     }).catch((err) => {
