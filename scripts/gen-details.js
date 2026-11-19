@@ -8,6 +8,12 @@
  *   ... --dry          只打印提示词，不请求
  *   ... --merge        草稿直接并入 content/details/<prov>.json（生成条目标 src.intro=generated，需人工复核）
  *
+ * 换模型/换服务商（任何 OpenAI 兼容端点都行）：
+ *   CONTENT_BASE=https://api.deepseek.com/v1 CONTENT_KEY=sk-xxx \
+ *   CONTENT_MODEL=deepseek-chat node scripts/gen-details.js 320000
+ *   CONTENT_BASE=https://dashscope.aliyuncs.com/compatible-mode/v1 \
+ *   CONTENT_MODEL=qwen-plus CONTENT_KEY=sk-xxx node scripts/gen-details.js 320000
+ *
  * 设计约束（和 docs/5a-content-architecture.md 对齐）：
  *   1. 只允许生成 6 个字段，门票/开放时间/交通一律不采信——这些是会变且会坑人的事实；
  *   2. 已有人工内容的景区不会被覆盖；
@@ -16,6 +22,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { isDone, len } = require('./content-rules');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC_DIR = path.join(ROOT, 'content', 'details');
@@ -23,7 +30,8 @@ const DRAFT_DIR = path.join(SRC_DIR, '.draft');
 const BOOK = require('../assets/data/attractions-5a.js');
 
 const MODEL = process.env.CONTENT_MODEL || 'deepseek-ai/DeepSeek-V4-Flash';
-const ENDPOINT = 'https://api.siliconflow.cn/v1/chat/completions';
+const BASE = (process.env.CONTENT_BASE || 'https://api.siliconflow.cn/v1').replace(/\/+$/, '');
+const ENDPOINT = BASE + '/chat/completions';
 const KEY = process.env.SILICONFLOW_KEY || process.env.CONTENT_KEY || '';
 
 const VOCAB = [
@@ -65,13 +73,13 @@ function buildPrompt(batch) {
     'name：原样使用我给的全称，一个字都不能改',
     'oneline：8~24 字，一句具体的话说清它是什么，不用形容词堆砌',
     'tags：3~6 个，只能从下列词表选：' + VOCAB.join('、'),
-    'intro：120~240 字。写地理位置、年代或规模、核心价值（世界遗产/地质/历史）、一句话体验。只写可核实的事实，不确定的数字宁可不写。',
+    'intro：150~240 字。写地理位置、年代或规模、核心价值（世界遗产/地质/历史）、一句话体验。只写可核实的事实，不确定的数字宁可不写。低于 150 字会被门禁拒绝。',
     'highlights：3~5 条，每条 8~30 字。必须落到「看什么、在哪个位置、什么时候最好」，不要「风景优美」这类空话。',
     'bestMonths：不超过 16 字',
     'duration：不超过 10 字（如「半天」「2-3 小时」）',
     '',
     '严禁输出：门票价格、开放时间、交通方式、电话、官网等易变信息。',
-    '严禁使用：秀丽、历史悠久、值得一游、必去、第一、最美、驰名、闻名遐迩、人间仙境、美不胜收、不容错过。',
+    '严禁使用：秀丽、历史悠久、值得一游、必去、最美、驰名、闻名遐迩、人间仙境、美不胜收、不容错过。任何评价值得用的最高级一律不写；唯一例外是景区官方名号或史实原文（如「天下第一关」城楼、「天下第一泉」、「中国第一条标准轨距铁路」），必须原样保留。',
     '',
     '景区列表：',
     lines,
@@ -126,8 +134,6 @@ function extractJson(text) {
   return JSON.parse(text.slice(a, b + 1));
 }
 
-const len = (s) => (typeof s === 'string' ? Array.from(s.trim()).length : 0);
-
 /** 白名单裁剪 + 基本长度检查；不合格的直接丢，不写入草稿 */
 function clean(item, allowed) {
   if (!item || !allowed[item.name]) return null;
@@ -147,7 +153,7 @@ function clean(item, allowed) {
     tips: '',
     src: { intro: 'generated', highlights: 'generated', oneline: 'generated' }
   };
-  if (len(out.oneline) < 8 || len(out.intro) < 100 || out.tags.length < 3 || out.highlights.length < 3) return null;
+  if (len(out.oneline) < 8 || len(out.intro) < 120 || out.tags.length < 3 || out.highlights.length < 3) return null;
   return out;
 }
 
@@ -168,7 +174,9 @@ async function main() {
 
   const exist = readProv(prov);
   const done = {};
-  (exist && exist.spots ? exist.spots : []).forEach((s) => { done[s.name] = true; });
+  // 「已完成」口径与 gen-all / validate 一致（content-rules.isDone）：
+  // 人工内容永不重写；AI 条目 intro ≥120 且无套话才算完成，否则重跑时自动补写
+  (exist && exist.spots ? exist.spots : []).forEach((s) => { done[s.name] = isDone(s); });
   const todo = book.filter((s) => !done[s.name]);
 
   const limit = Number(arg('limit', 0)) || todo.length;
@@ -189,7 +197,9 @@ async function main() {
   }
 
   if (!KEY) {
-    console.error('缺 SILICONFLOW_KEY 环境变量，先 export 再跑。');
+    console.error('缺 API key。用 SILICONFLOW_KEY 或 CONTENT_KEY 传，例如：');
+    console.error('  SILICONFLOW_KEY=sk-xxx node scripts/gen-details.js ' + prov);
+    console.error('  CONTENT_BASE=https://api.deepseek.com/v1 CONTENT_KEY=sk-xxx CONTENT_MODEL=deepseek-chat node scripts/gen-details.js ' + prov);
     process.exit(1);
   }
 
@@ -228,15 +238,20 @@ async function main() {
   };
 
   if (arg('merge', false)) {
+    // 同名替换：本次生成的覆盖旧的（用于补写 intro 过短的条目）；
+    // 旧条目里 src.intro=manual 的人工内容若同名被覆盖了也说明 AI 不该碰它——但 done 判断已保证 manual 不会进 targets
+    const gotNames = {};
+    got.forEach((s) => { gotNames[s.name] = true; });
+    const kept = (exist && exist.spots ? exist.spots : []).filter((s) => !(s && s.name && gotNames[s.name]));
     const merged = {
       prov: Number(prov),
       v: (exist && exist.v) || 1,
       updatedAt: Date.now(),
-      spots: (exist && exist.spots ? exist.spots : []).concat(got)
+      spots: kept.concat(got)
     };
     fs.mkdirSync(SRC_DIR, { recursive: true });
     fs.writeFileSync(path.join(SRC_DIR, prov + '.json'), JSON.stringify(merged, null, 2) + '\n', 'utf8');
-    console.log('\n已并入 content/details/' + prov + '.json（共 ' + merged.spots.length + ' 条）');
+    console.log('\n已并入 content/details/' + prov + '.json（共 ' + merged.spots.length + ' 条，替换 ' + Object.keys(gotNames).length + ' 条）');
   } else {
     fs.mkdirSync(DRAFT_DIR, { recursive: true });
     const out = path.join(DRAFT_DIR, prov + '.json');

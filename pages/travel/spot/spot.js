@@ -5,10 +5,10 @@
  * 渲染分两段：先用包内骨架立刻出标题/城市/年份，再异步补内容。
  * 没有内容不是错误：整页只剩基本信息 + 一句说明，不空白、不报错。
  */
-const attractionLayer = require('../../utils/attractionLayer');
-const attrContent = require('../../utils/attrContent');
-const attrImage = require('../../utils/attrImage');
-const spotStore = require('../../utils/spotStore');
+const attractionLayer = require('../../../utils/attractionLayer');
+const attrContent = require('../../../utils/attrContent');
+const attrImage = require('../../../utils/attrImage');
+const spotStore = require('../../../utils/spotStore');
 
 /** 人文 / 自然 → 主图渐变色调（两者都占算混合） */
 function toneOf(types) {

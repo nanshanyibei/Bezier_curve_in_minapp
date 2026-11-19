@@ -5,7 +5,8 @@
  * 这个回答「去过哪些景区」。本地 storage 即时落盘，异步推云，
  * 云端集合 spot_marks 权限「仅创建者可读写」，_openid 由云开发注入。
  *
- * 文档 _id = s_<省adcode>_<名称指纹>，天然去重，同一景区不会写两条。
+ * 本地键 = s_<省adcode>_<名称指纹>；云端 _id = <身份键>_<本地键>，
+ * 避免两人标记同一景区时 _id 撞车（集合按 _openid 隔离，但 _id 全局唯一）。
  */
 const cb = require('./cb');
 
@@ -30,6 +31,16 @@ function keyOf(prov, name) {
   const n = String(name || '').trim();
   if (!p || !n) return '';
   return 's_' + p + '_' + hash(n);
+}
+
+/**
+ * 云端 _id 必须带身份前缀。
+ * 集合权限靠 _openid 隔离，但 _id 是全局唯一的：两人都标记「故宫」时，
+ * 裸业务键会让后来者的 set 撞上前者的文档（权限拒绝，写入静默失败）。
+ */
+function cloudKeyOf(k) {
+  const u = (cb.getUserKey && cb.getUserKey()) || '';
+  return u ? u + '_' + k : k;
 }
 
 function loadAll() {
@@ -84,10 +95,12 @@ function set(prov, name, status) {
   }
   save(d);
 
+  // 身份键要等 ready（whoami 返回 openid）之后再算，否则会退化成设备键
+  const cid = cb.ready().then(() => cloudKeyOf(k));
   if (status) {
-    cb.setDoc(COL, k, { name: String(name), prov: provOf(prov), status: status, at: at });
+    cid.then((id) => cb.setDoc(COL, id, { name: String(name), prov: provOf(prov), status: status, at: at }));
   } else {
-    cb.removeDoc(COL, k);
+    cid.then((id) => cb.removeDoc(COL, id));
   }
   return status || '';
 }

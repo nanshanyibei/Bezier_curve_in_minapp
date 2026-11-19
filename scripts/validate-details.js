@@ -4,16 +4,20 @@
  * 用法：
  *   node scripts/validate-details.js            # 校验全部省份，通过则产出导入文件
  *   node scripts/validate-details.js 110000     # 只校验某个省
+ *   node scripts/validate-details.js --bundle   # 校验完再把各省合成一个文件，一次导入
  *   node scripts/validate-details.js --force    # 有 ERROR 也产出（仅调试，禁止用于发布）
  *
  * 输出：
  *   backup/wxcloud-import/attraction_details/p_<省adcode>.json  （JSON Lines，一条一个省文档）
+ *   backup/wxcloud-import/attraction_details/_all.json          （--bundle 时产出，全部省份合并）
  *
  * 规则见 docs/5a-content-architecture.md「内容门禁」一节。
  * 宁可缺字段，不要写空话：必填项缺失直接判错，可选字段缺了只是警告（页面自动不渲染该行）。
  */
 const fs = require('fs');
 const path = require('path');
+const rules = require('./content-rules');
+const { hasBanned, len } = rules;
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC_DIR = path.join(ROOT, 'content', 'details');
@@ -27,8 +31,10 @@ const VOCAB = [
   '遗址', '历史', '美食', '冰雪', '演出'
 ];
 
-/** 套话/绝对化用语：命中即判错 */
-const BANNED = /秀丽|历史悠久|值得一游|必去|必来|第一|最美|驰名|闻名遐迩|人间仙境|美不胜收|不容错过|打卡圣地/;
+function scanBanned(text, out, where) {
+  const m = hasBanned(text);
+  if (m) fail(out, where, '命中套话/绝对化用语「' + m + '」→ ' + String(text).slice(0, 20));
+}
 
 const LIMITS = {
   oneline: { min: 8, max: 24 },
@@ -42,8 +48,6 @@ const LIMITS = {
   transport: 60,
   tips: 60
 };
-
-const len = (s) => (typeof s === 'string' ? Array.from(s.trim()).length : 0);
 
 function fail(list, where, msg) {
   list.push({ level: 'ERROR', where: where, msg: msg });
@@ -129,12 +133,9 @@ function checkSpot(spot, provName, out) {
     }
   });
 
-  // 套话扫描：oneline / intro / highlights 全扫
+  // 套话扫描：oneline / intro / highlights 全扫（专名先豁免）
   const texts = [spot.oneline || '', spot.intro || ''].concat(spot.highlights || []);
-  texts.forEach((t) => {
-    const m = BANNED.exec(t || '');
-    if (m) fail(out, where, '命中套话/绝对化用语「' + m[0] + '」→ ' + String(t).slice(0, 20));
-  });
+  texts.forEach((t) => scanBanned(t, out, where));
 
   // 缺失提醒
   ['ticket', 'hours', 'bestMonths', 'duration', 'transport', 'tips'].forEach((k) => {
@@ -236,7 +237,14 @@ function main() {
     if (warns.length > 8) console.log('  · 其余 ' + (warns.length - 8) + ' 条提醒略');
 
     if (errs.length && !force) {
-      console.log('  → 未产出导入文件（先修掉 ✗）');
+      // 关键：不出新文件的同时删掉旧产物，防止旧版本内容被误导入云库
+      const stale = path.join(OUT_DIR, 'p_' + (r.data ? r.data.prov : path.basename(file, '.json')) + '.json');
+      if (fs.existsSync(stale)) {
+        fs.unlinkSync(stale);
+        console.log('  → 未产出导入文件，已删除过期旧产物 ' + path.basename(stale));
+      } else {
+        console.log('  → 未产出导入文件（先修掉 ✗）');
+      }
       return;
     }
     if (!r.data) return;
@@ -256,6 +264,21 @@ function main() {
 
   console.log('');
   console.log('汇总：ERROR ' + errCount + ' · WARN ' + warnCount + ' · 产出 ' + written.length + ' 个文件');
+
+  if (args.indexOf('--bundle') >= 0) {
+    // 控制台导入一次只能选一个文件，全量逐省点 30 次太蠢，所以合成一份
+    const lines = fs.readdirSync(OUT_DIR)
+      .filter((f) => /^p_\d{6}\.json$/.test(f))
+      .sort()
+      .map((f) => fs.readFileSync(path.join(OUT_DIR, f), 'utf8').trim())
+      .filter(Boolean);
+    if (lines.length) {
+      const bundle = path.join(OUT_DIR, '_all.json');
+      fs.writeFileSync(bundle, lines.join('\n') + '\n', 'utf8');
+      console.log('✓ 合成 ' + path.relative(ROOT, bundle) + '（' + lines.length + ' 个省，' + (fs.statSync(bundle).size / 1024).toFixed(1) + ' KB）');
+    }
+  }
+
   if (!written.length) {
     console.log('没有任何文件产出。');
     process.exit(errCount ? 1 : 0);

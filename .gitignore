@@ -4,3 +4,4 @@ dist/
 .DS_Store
 miniprogram_npm
 release
+content/
