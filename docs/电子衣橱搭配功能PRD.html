@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>电子衣橱 · 搭配功能产品需求文档（PRD）</title>
+<style>
+  :root {
+    --bg: #f7f7f9;
+    --card: #ffffff;
+    --text: #1f2329;
+    --dim: #6b7280;
+    --line: #e5e7eb;
+    --accent: #4f7cf7;
+    --accent-soft: #eef3ff;
+    --warn-bg: #fff7e6;
+    --warn-line: #f0c36d;
+    --warn-text: #8a5a00;
+    --ok-bg: #eefaf3;
+    --ok-text: #1f7a4d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  .wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  header.hero {
+    background: linear-gradient(135deg, #1d2433 0%, #2c3a57 60%, #3f5a8f 100%);
+    color: #fff;
+    border-radius: 18px;
+    padding: 36px 40px;
+    margin-bottom: 28px;
+  }
+  .hero h1 {
+    margin: 0 0 8px;
+    font-size: 30px;
+    letter-spacing: .5px;
+  }
+  .hero .sub { color: #c7d3ea; font-size: 15px; margin: 0 0 20px; }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 26px;
+    font-size: 13px;
+    color: #dbe4f5;
+  }
+  .meta b { color: #fff; font-weight: 600; }
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .tag.todo { background: rgba(255, 196, 0, .18); color: #ffd15c; border: 1px solid rgba(255, 209, 92, .35); }
+  .tag.p0 { background: var(--accent-soft); color: var(--accent); border: 1px solid #cddcff; }
+  .tag.p1 { background: #f3f4f6; color: #4b5563; border: 1px solid var(--line); }
+  nav.toc {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 24px;
+    margin-bottom: 28px;
+    font-size: 14px;
+  }
+  nav.toc strong { display: block; margin-bottom: 8px; font-size: 13px; color: var(--dim); letter-spacing: 1px; }
+  nav.toc a { color: var(--text); text-decoration: none; margin-right: 18px; white-space: nowrap; }
+  nav.toc a:hover { color: var(--accent); }
+  section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px 32px;
+    margin-bottom: 22px;
+  }
+  h2 {
+    margin: 0 0 16px;
+    font-size: 21px;
+    padding-left: 12px;
+    border-left: 4px solid var(--accent);
+    line-height: 1.3;
+  }
+  h3 {
+    margin: 26px 0 10px;
+    font-size: 17px;
+  }
+  h3:first-of-type { margin-top: 10px; }
+  p { margin: 8px 0; }
+  .dim { color: var(--dim); }
+  .small { font-size: 13px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 18px;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #fafbfc; font-weight: 600; color: #374151; white-space: nowrap; }
+  tbody tr:nth-child(even) td { background: #fcfcfd; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 4px 0; }
+  .callout {
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 14px 0;
+    font-size: 14px;
+  }
+  .callout.assume { background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-text); }
+  .callout.ok { background: var(--ok-bg); color: var(--ok-text); }
+  code {
+    background: #f3f4f6;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1.15fr .85fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 760px) {
+    .two-col { grid-template-columns: 1fr; }
+    .wrap { padding: 24px 14px 60px; }
+    header.hero { padding: 26px 22px; }
+    section { padding: 22px 18px; }
+  }
+
+  /* 布局示意 */
+  .canvas-demo {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    max-width: 380px;
+  }
+  .canvas-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: #fff;
+    border: 1px dashed #dfe3ea;
+    border-radius: 8px;
+  }
+  .slot {
+    position: absolute;
+    border: 1px dashed #c9d4e8;
+    border-radius: 6px;
+    background: #f7f9ff;
+    color: #6c7a96;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .slot.req { background: #f3f6fe; border-color: #b9c8e8; }
+  .slot.opt { background: #fbfbfd; border-color: #d9dde7; color: #8a91a1; }
+  .slot-label { padding: 4px; }
+  .slot.top { left: 8%; width: 56%; top: 5%; height: 27%; }
+  .slot.bottom { left: 8%; width: 54%; top: 34%; height: 26%; }
+  .slot.shoes { left: 14%; width: 38%; top: 68%; height: 12%; }
+  .slot.bag { left: 68%; width: 22%; top: 7%; height: 18%; }
+  .slot.acc1 { left: 68%; width: 20%; top: 33%; height: 16%; }
+  .slot.acc2 { left: 68%; width: 20%; top: 53%; height: 16%; }
+  .demo-legend {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--dim);
+  }
+
+  /* 流程 */
+  .flow { display: grid; gap: 10px; margin: 12px 0; }
+  .flow-step {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+  .flow-num {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .flow-body { padding-top: 5px; }
+  .flow-body b { display: block; font-size: 14px; }
+
+  .chip-line { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .chip {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 13px;
+    color: #4b5563;
+    background: #fff;
+  }
+  .chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>电子衣橱 · 搭配功能产品需求文档</h1>
+    <p class="sub">在现有衣橱里选择上装、下装、鞋子，可再搭配包包与配饰，生成一张白底平铺搭配图并保存。</p>
+    <div class="meta">
+      <span><b>版本：</b>v0.1 评审稿</span>
+      <span><b>日期：</b>2026-11-20</span>
+      <span><b>状态：</b><span class="tag p0">已确认 · 实现中</span></span>
+      <span><b>形态：</b>微信小程序 · 电子衣橱模块</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <strong>目录</strong>
+    <a href="#bg">1. 背景与目标</a>
+    <a href="#scope">2. 范围</a>
+    <a href="#model">3. 核心概念与规则</a>
+    <a href="#layout">4. 搭配图布局</a>
+    <a href="#fr">5. 功能需求</a>
+    <a href="#states">6. 状态与异常</a>
+    <a href="#shared">7. 共享规则</a>
+    <a href="#open">8. 待确认问题</a>
+  </nav>
+
+  <section id="bg">
+    <h2>1. 背景与目标</h2>
+    <p><b>现状：</b>电子衣橱已经支持衣物拍照、白底处理、分类与季节筛选、增删改。每一件衣服是独立记录，用户只能逐件翻看。</p>
+    <p><b>问题：</b>用户想判断「这件上衣配这条裤子、这双鞋，再加哪个包」时，只能靠想象或来回切换单件照片，看不到一套搭配的整体效果。</p>
+    <p><b>产品回应：</b>在衣橱内增加「搭配」工作台。用户按位置选衣，系统按「上装在上、下装在中、鞋子在下、包与配饰在侧边」的固定版式，实时生成一张白底平铺搭配图；可以把搭配保存下来，下次直接查看。</p>
+    <p><b>期望结果（可观察）：</b>用户不离开衣橱，就能完成「选几件衣服 → 看到整套搭配图 → 保存 → 在搭配列表再次打开」这一条完整路径。</p>
+    <div class="callout assume">
+      <b>假设：</b>使用该功能的用户，衣橱中已分别录入至少 1 件上装、1 件下装、1 双鞋；否则进入新建搭配时需要先补齐衣物。
+    </div>
+  </section>
+
+  <section id="scope">
+    <h2>2. 范围</h2>
+    <h3>P0：本次必须完成</h3>
+    <ul>
+      <li><b>分类调整：</b>衣橱分类由「上装 / 下装 / 外套 / 鞋包 / 配饰」调整为「上装 / 下装 / 外套 / 鞋 / 包 / 配饰」，让鞋子与包可以分别选择。</li>
+      <li><b>双模式入口：</b>衣橱页顶部可在「衣物 / 搭配」之间切换。</li>
+      <li><b>新建搭配：</b>选择上装（或外套）、下装、鞋；可选 1 个包、最多 2 件配饰；实时预览白底拼图。</li>
+      <li><b>保存搭配：</b>命名并保存搭配图与衣物清单；本地可用，联网后同步云端。</li>
+      <li><b>搭配列表与详情：</b>查看已保存搭配的大图与衣物清单，支持删除。</li>
+      <li><b>空态与异常：</b>分类缺衣、生成失败、上传失败、网络断开时都有明确反馈与恢复路径。</li>
+    </ul>
+    <h3>P1：后续增强</h3>
+    <ul>
+      <li>重新编辑已保存的搭配（换一件衣服再保存）。</li>
+      <li>把搭配图保存到手机相册。</li>
+      <li>在选衣时按季节过滤候选衣物。</li>
+    </ul>
+    <h3>不包含</h3>
+    <ul>
+      <li>真人试穿、衣服贴合身体的上身效果。</li>
+      <li>自动推荐、随机搭配、根据天气推荐。</li>
+      <li>分享给好友、多人协作、搭配社区。</li>
+    </ul>
+  </section>
+
+  <section id="model">
+    <h2>3. 核心概念与规则</h2>
+    <p><b>搭配：</b>一组被选中的衣物，加上按固定版式生成的一张搭配图。搭配是衣物的「快照」：保存后即使原衣物被删除或修改，已保存的搭配图与清单仍然保留。</p>
+
+    <h3>3.1 槽位定义</h3>
+    <table>
+      <thead>
+        <tr><th>槽位</th><th>可放入的分类</th><th>数量</th><th>是否必选</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>上装</td><td>上装、外套</td><td>1</td><td>必选</td><td>上装与外套二选一，不能同时选两件</td></tr>
+        <tr><td>下装</td><td>下装</td><td>1</td><td>必选</td><td>裤子、裙子等统一归入下装</td></tr>
+        <tr><td>鞋</td><td>鞋</td><td>1</td><td>必选</td><td>放在画面最下方</td></tr>
+        <tr><td>包</td><td>包</td><td>0~1</td><td>可选</td><td>放在右侧辅列上方</td></tr>
+        <tr><td>配饰</td><td>配饰</td><td>0~2</td><td>可选</td><td>放在右侧辅列下方，最多两件</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.2 关键规则</h3>
+    <ul>
+      <li><b>不可重复占用：</b>同一件衣物在同一套搭配中只能出现一次；上装槽与外套槽位合并为上装槽。</li>
+      <li><b>必选校验：</b>上装、下装、鞋未选齐时不能保存，保存按钮置灰，并提示缺少的槽位。</li>
+      <li><b>数量上限：</b>包最多 1 个，配饰最多 2 件；超出时提示「最多搭配 X 件」。</li>
+      <li><b>实时预览：</b>每次选择变化后重新生成预览；预览图就是最终保存图，所见即所得。</li>
+      <li><b>搭配图规格：</b>正方形、纯白背景、输出为 JPG；主体等比缩放，不拉伸、不裁剪。</li>
+      <li><b>空槽不占位：</b>没有选择包或配饰时，右侧辅列不显示，主列自动居中并适当放大。</li>
+      <li><b>快照规则：</b>保存时记录衣物名称、分类与当时的搭配图；后续衣物被删除，搭配图仍可查看，清单中标记「已删除」。</li>
+      <li><b>命名规则：</b>名称选填，最多 20 个字；不填写时自动使用「搭配 M月D日 HH:mm」。</li>
+    </ul>
+  </section>
+
+  <section id="layout">
+    <h2>4. 搭配图布局</h2>
+    <div class="two-col">
+      <div>
+        <p>整体为 1:1 白底画布，默认留白 5%~6%。主列占宽约 56%，右侧辅列占宽约 22%~20%。</p>
+        <ul>
+          <li><b>主列：</b>上装 → 下装 → 鞋，从上到下垂直排列；上装与下装各占约 27%/26% 高度。</li>
+          <li><b>鞋区：</b>占宽约 38%、高约 12%，明显小于上装与下装，位于画面下方。</li>
+          <li><b>辅列：</b>包约 22%×18%，配饰每件约 20%×16%，整体面积小于主列衣物。</li>
+          <li><b>可选槽为空：</b>辅列隐藏，主列水平居中，衣物展示框宽度适当放大。</li>
+          <li><b>图片适配：</b>每类使用固定展示框，先裁掉照片白边再等比缩放居中放入；不裁切主体、不拉伸。</li>
+          <li><b>占位：</b>衣物没有照片时，在该位置显示浅灰圆角块与分类文字，不显示衣物名。</li>
+        </ul>
+      </div>
+      <div>
+        <div class="canvas-demo">
+          <div class="canvas-frame">
+            <div class="slot req top"><span class="slot-label">上装 / 外套</span></div>
+            <div class="slot req bottom"><span class="slot-label">下装</span></div>
+            <div class="slot req shoes"><span class="slot-label">鞋</span></div>
+            <div class="slot opt bag"><span class="slot-label">包（可选）</span></div>
+            <div class="slot opt acc1"><span class="slot-label">配饰 1</span></div>
+            <div class="slot opt acc2"><span class="slot-label">配饰 2（可选）</span></div>
+          </div>
+          <div class="demo-legend"><span>主列：上装 → 下装 → 鞋</span><span>辅列：包 / 配饰</span></div>
+        </div>
+        <p class="small dim">示意图只表达位置关系，实际图片按分类展示框等比放入。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="fr">
+    <h2>5. 功能需求</h2>
+
+    <h3>FR-01 分类调整与存量迁移 <span class="tag p0">P0</span></h3>
+    <p><b>目的：</b>让鞋子和包可以分别被选择，避免「鞋包」一个分类无法区分槽位。</p>
+    <ul>
+      <li>衣橱分类改为 6 类：上装、下装、外套、鞋、包、配饰。</li>
+      <li>衣物列表的筛选条、衣物编辑页的分类选项同步改为 6 类。</li>
+      <li><b>存量迁移：</b>原「鞋包」分类下的衣物默认归入「鞋」；用户可在衣物编辑页改为「包」。</li>
+      <li>迁移不改变衣物名称、照片、颜色、季节、备注等已有信息。</li>
+    </ul>
+    <div class="callout ok">
+      <b>已确认：</b>按上述方案拆分分类，存量「鞋包」衣物归入「鞋」，用户可在衣物编辑页改为「包」。
+    </div>
+
+    <h3>FR-02 衣橱双模式入口 <span class="tag p0">P0</span></h3>
+    <p><b>目的：</b>不增加底部 Tab，在衣橱内直接进入搭配。</p>
+    <ul>
+      <li><b>布局：</b>衣橱页顶部、统计信息下方增加分段切换「衣物 / 搭配」。</li>
+      <li><b>默认状态：</b>首次进入停留在「衣物」；记住用户上次选择，下次进入时回到上次模式。</li>
+      <li><b>衣物模式：</b>保持现有分类/季节筛选、双列网格与添加按钮。</li>
+      <li><b>搭配模式：</b>展示已保存搭配的双列网格；右下角悬浮按钮变为「+ 新建搭配」。</li>
+      <li><b>空态：</b>还没有搭配时，显示「还没有搭配」与「新建第一套」按钮。</li>
+    </ul>
+
+    <h3>FR-03 新建搭配 <span class="tag p0">P0</span></h3>
+    <p><b>目的：</b>完成「选衣 → 看到整体效果」的核心动作。</p>
+    <p><b>页面结构（从上到下）：</b></p>
+    <ol>
+      <li><b>搭配预览：</b>正方形白底预览区，实时显示当前选择生成的搭配图。</li>
+      <li><b>上装：</b>候选衣物横向列表，包含上装与外套，单选。</li>
+      <li><b>下装：</b>候选衣物横向列表，单选。</li>
+      <li><b>鞋：</b>候选衣物横向列表，单选。</li>
+      <li><b>包：</b>候选衣物横向列表，最多选 1 件。</li>
+      <li><b>配饰：</b>候选衣物横向列表，最多选 2 件。</li>
+      <li><b>底部：</b>「保存搭配」按钮。</li>
+    </ol>
+    <p><b>选择规则：</b></p>
+    <ul>
+      <li>点击未选中的衣物即选中；再次点击已选中的衣物即取消。</li>
+      <li>必选槽位切换选择时，旧选择自动取消，不需要先取消再选。</li>
+      <li>配饰超过 2 件、包超过 1 件时，不改变当前选择，并提示数量上限。</li>
+      <li>候选衣物按最近添加时间倒序，展示缩略图与名称；没有照片的衣物显示分类图标占位。</li>
+      <li>某个槽位没有任何候选衣物时，显示「这个分类还没有衣物」与「去添加」，点击进入新增衣物页并默认选中该分类。</li>
+    </ul>
+    <p><b>预览规则：</b></p>
+    <ul>
+      <li>必选槽位未选齐时，预览区对应位置显示虚线占位与分类名。</li>
+      <li>选择变化后立即刷新预览；生成过程中显示「生成中」，不阻塞继续选衣。</li>
+      <li>生成失败时保留当前选择，显示「预览生成失败，点击重试」，可重试。</li>
+    </ul>
+
+    <h3>FR-04 保存搭配 <span class="tag p0">P0</span></h3>
+    <ul>
+      <li><b>触发：</b>点击「保存搭配」。必选槽位未齐、预览未生成完成、正在保存时按钮不可用，并给出原因提示。</li>
+      <li><b>命名：</b>弹出命名框，预填「搭配 M月D日 HH:mm」，最多 20 个字，可留空使用预填名称。</li>
+      <li><b>保存内容：</b>搭配名称、搭配图、所选衣物清单（衣物名称与分类快照）、创建时间。</li>
+      <li><b>结果：</b>保存成功后提示「已保存」，返回搭配列表，新搭配排在最前面。</li>
+      <li><b>失败：</b>搭配图生成失败不允许保存；本地保存成功但云端同步失败时，仍视为保存成功，并标记为待同步，不打断用户。</li>
+      <li><b>防重复：</b>保存过程中按钮显示「保存中」，重复点击不产生第二条记录。</li>
+    </ul>
+
+    <h3>FR-05 搭配列表与详情 <span class="tag p0">P0</span></h3>
+    <ul>
+      <li><b>列表：</b>双列卡片，展示搭配图、名称与创建时间，按创建时间倒序。</li>
+      <li><b>详情：</b>点击卡片进入详情，展示大图、名称、创建时间、衣物清单（分类标签 + 衣物名称）。</li>
+      <li><b>已删除衣物：</b>清单中对应衣物显示删除线或「已删除」标签，搭配图不受影响。</li>
+      <li><b>删除：</b>详情页提供删除，二次确认后删除本地与云端的这条搭配；不删除任何衣物。</li>
+      <li><b>返回：</b>从详情返回列表时，列表保持当前滚动位置。</li>
+    </ul>
+    <p class="dim small">P1：重新编辑、保存图片到相册。</p>
+
+    <h3>FR-06 同步与恢复 <span class="tag p0">P0</span></h3>
+    <ul>
+      <li>搭配与衣物一样：本地优先，联网后自动同步云端。</li>
+      <li>换设备或重装后，登录同一微信账号可以拉回已保存的搭配图与清单。</li>
+      <li>同一套搭配在两台设备上被修改时，以最近保存的版本为准。</li>
+      <li>离线时仍可创建、查看、删除搭配；联网后自动补同步。</li>
+    </ul>
+  </section>
+
+  <section id="states">
+    <h2>6. 状态与异常</h2>
+    <table>
+      <thead>
+        <tr><th>场景</th><th>触发条件</th><th>界面表现</th><th>恢复方式</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>分类缺衣</td><td>进入新建搭配时某必选槽没有候选衣物</td><td>该槽显示空态与「去添加」</td><td>跳转新增衣物页，默认选中该分类；返回后自动刷新候选</td></tr>
+        <tr><td>未选齐必选</td><td>点击保存时上装/下装/鞋缺失</td><td>按钮置灰，提示缺少的槽位</td><td>补齐后自动恢复可保存</td></tr>
+        <tr><td>超过数量上限</td><td>已选 2 件配饰后再选第 3 件</td><td>不改变选择，提示「配饰最多 2 件」</td><td>先取消一件再选</td></tr>
+        <tr><td>预览生成中</td><td>选择变化后</td><td>预览区显示「生成中」，保存按钮暂时不可用</td><td>生成完成自动恢复</td></tr>
+        <tr><td>预览生成失败</td><td>本地处理异常</td><td>预览区显示失败与「重试」</td><td>点击重试，选择不丢失</td></tr>
+        <tr><td>云端同步失败</td><td>保存时网络异常</td><td>提示已保存到本机</td><td>联网后自动补同步</td></tr>
+        <tr><td>原衣物被删除</td><td>查看已保存搭配</td><td>搭配图正常；清单对应项标「已删除」</td><td>无需处理，或删除该搭配</td></tr>
+        <tr><td>删除搭配</td><td>详情页点击删除</td><td>二次确认弹窗</td><td>确认后删除；取消则不变</td></tr>
+        <tr><td>无搭配数据</td><td>首次进入搭配模式</td><td>空态图 + 「新建第一套」</td><td>点击进入新建</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="shared">
+    <h2>7. 共享规则</h2>
+    <h3>7.1 分类与槽位对应</h3>
+    <table>
+      <thead>
+        <tr><th>衣物分类</th><th>可进入的槽位</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>上装</td><td>上装槽</td></tr>
+        <tr><td>外套</td><td>上装槽（与上装二选一）</td></tr>
+        <tr><td>下装</td><td>下装槽</td></tr>
+        <tr><td>鞋</td><td>鞋槽</td></tr>
+        <tr><td>包</td><td>包槽</td></tr>
+        <tr><td>配饰</td><td>配饰槽</td></tr>
+      </tbody>
+    </table>
+
+    <h3>7.2 图片展示</h3>
+    <ul>
+      <li>搭配图固定 1:1、纯白底；上传前已做过白底处理的衣物图直接使用。</li>
+      <li>每个槽位有固定展示框，衣物图等比放入并居中；上装与下装优先展示完整轮廓。</li>
+      <li>没有照片的衣物用分类图标占位，不阻断搭配与保存。</li>
+      <li>搭配图生成后即为最终保存图；后续更换衣物照片不会自动更新旧搭配。</li>
+    </ul>
+
+    <h3>7.3 编辑与删除边界</h3>
+    <ul>
+      <li>删除衣物不影响已保存搭配与搭配图。</li>
+      <li>删除搭配只删除这条搭配，不影响衣物。</li>
+      <li>P0 不支持修改已保存搭配的衣物；需要调整时新建一套。</li>
+    </ul>
+
+    <h3>7.4 权限与隐私</h3>
+    <ul>
+      <li>搭配数据仅本人可见、可操作，不提供分享与公开入口。</li>
+      <li>搭配图在手机本地生成，不把衣物照片发送给第三方服务。</li>
+      <li>开启云端同步后，搭配图与清单保存在本人的私有云空间；删除搭配时同步清理云端数据。</li>
+    </ul>
+  </section>
+
+  <section id="open">
+    <h2>8. 已确认决策</h2>
+    <table>
+      <thead>
+        <tr><th>#</th><th>决策项</th><th>结论</th><th>影响</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>是否接受把「鞋包」拆成「鞋」和「包」？</td>
+          <td>拆分，存量默认归「鞋」，用户可改</td>
+          <td>影响衣物筛选、编辑页与存量数据</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>包最多 1 个、配饰最多 2 件是否合适？</td>
+          <td>包 1、配饰 2</td>
+          <td>影响选择规则与搭配图布局</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>P0 是否需要支持「重新编辑已保存搭配」？</td>
+          <td>P1；P0 只能新建与删除</td>
+          <td>影响开发范围与详情页入口</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>搭配名称是否必须填写？</td>
+          <td>选填，留空自动用日期时间命名</td>
+          <td>影响保存弹层与列表展示</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout ok">
+      4 项决策已确认：分类拆分并按上述规则迁移、包 1 件 / 配饰 2 件、P0 不做重新编辑、搭配名称选填。按本稿实现。
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

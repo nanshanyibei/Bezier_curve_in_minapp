@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bézier Lab · 贝塞尔曲线实验室</title>
+<meta name="description" content="拖动控制点，实时调出 cubic-bezier 缓动曲线。附原理拆解与小程序作品展示。">
+<meta name="theme-color" content="#0b0d12">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0d12'/%3E%3Cpath d='M6 24C10 8 22 24 26 8' stroke='%236ea8fe' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="#top">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 25C9 7 23 25 27 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="5" cy="25" r="2.6" fill="currentColor"/><circle cx="27" cy="7" r="2.6" fill="currentColor"/></svg>
+    <span>Bézier Lab</span>
+  </a>
+  <nav class="nav-links">
+    <a href="#playground">曲线实验室</a>
+    <a href="#principle">原理</a>
+    <a href="#works">作品</a>
+    <a class="ghost" href="https://github.com/nanshanyibei/Bezier_curve_in_minapp" target="_blank" rel="noreferrer">GitHub</a>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <p class="badge">纯 CSS · 零依赖 · 可直接拖拉</p>
+    <h1>把设计稿里的曲线<br><span class="grad">一条条调出来</span></h1>
+    <p class="lede">贝塞尔曲线是动效的骨架。拖动下方两个控制点，实时生成 <code>cubic-bezier()</code>，顺便看看它是怎么被画出来的。</p>
+    <div class="hero-actions">
+      <a class="btn primary" href="#playground">开始调曲线</a>
+      <a class="btn" href="#works">看看小程序作品</a>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 900 300" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="heroStroke" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#6ea8fe"/>
+            <stop offset="0.55" stop-color="#b388ff"/>
+            <stop offset="1" stop-color="#67e8c9"/>
+          </linearGradient>
+        </defs>
+        <path id="heroPath" d="M40 250 C 220 40, 400 40, 520 180 S 800 280, 860 60" fill="none" stroke="url(#heroStroke)" stroke-width="2.5" stroke-linecap="round" opacity=".85"/>
+        <circle r="5" fill="#fff">
+          <animateMotion dur="7s" repeatCount="indefinite" rotate="auto">
+            <mpath href="#heroPath"/>
+          </animateMotion>
+        </circle>
+      </svg>
+    </div>
+  </section>
+
+  <section id="playground" class="section">
+    <div class="section-head reveal">
+      <p class="kicker">01 / Playground</p>
+      <h2>拖动控制点，生成缓动曲线</h2>
+      <p class="sub">横轴是时间，纵轴是进度。控制点越靠上，动画起步越快。</p>
+    </div>
+
+    <div class="lab reveal">
+      <div class="lab-canvas">
+        <svg id="bezier-svg" viewBox="0 0 420 420" role="img" aria-label="贝塞尔曲线编辑器">
+          <defs>
+            <linearGradient id="curveStroke" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0" stop-color="#6ea8fe"/>
+              <stop offset="1" stop-color="#b388ff"/>
+            </linearGradient>
+            <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse" x="40" y="40">
+              <path d="M34 0H0V34" fill="none" stroke="rgba(255,255,255,.055)" stroke-width="1"/>
+            </pattern>
+          </defs>
+          <rect x="40" y="40" width="340" height="340" fill="url(#grid)"/>
+          <rect x="40" y="40" width="340" height="340" fill="none" stroke="rgba(255,255,255,.16)"/>
+          <line x1="40" y1="380" x2="380" y2="380" stroke="rgba(255,255,255,.28)"/>
+          <line x1="40" y1="40" x2="40" y2="380" stroke="rgba(255,255,255,.28)"/>
+          <text class="axis-label" x="386" y="396">t</text>
+          <text class="axis-label" x="20" y="46">1</text>
+          <text class="axis-label" x="18" y="384">0</text>
+
+          <line id="guide-1" class="guide" x1="40" y1="380" x2="125" y2="346"/>
+          <line id="guide-2" class="guide" x1="380" y1="40" x2="125" y2="40"/>
+          <path id="curve-path" class="curve" d="M40 380 C 125 346 125 40 380 40"/>
+
+          <circle cx="40" cy="380" r="5.5" class="anchor"/>
+          <circle cx="380" cy="40" r="5.5" class="anchor"/>
+          <circle id="handle-1" class="handle" cx="125" cy="346" r="10" data-i="1"/>
+          <circle id="handle-2" class="handle h2" cx="125" cy="40" r="10" data-i="2"/>
+        </svg>
+        <p class="hint">按住圆点拖动 · 支持触屏</p>
+      </div>
+
+      <div class="lab-panel">
+        <div class="presets" id="presets">
+          <button class="chip" data-v="0.25,0.1,0.25,1">ease</button>
+          <button class="chip" data-v="0.42,0,1,1">ease-in</button>
+          <button class="chip" data-v="0,0,0.58,1">ease-out</button>
+          <button class="chip" data-v="0.42,0,0.58,1">ease-in-out</button>
+          <button class="chip" data-v="0,0,1,1">linear</button>
+          <button class="chip" data-v="0.34,1.56,0.64,1">回弹</button>
+        </div>
+
+        <div class="demo">
+          <div class="demo-track"><span class="demo-dot" id="demo-dot"></span></div>
+          <button class="btn small" id="play">播放缓动</button>
+        </div>
+
+        <div class="output">
+          <span class="output-label">CSS</span>
+          <code id="bezier-output">cubic-bezier(0.25, 0.1, 0.25, 1)</code>
+          <button class="copy" id="copy" aria-label="复制">复制</button>
+        </div>
+
+        <dl class="readout">
+          <div><dt>P1</dt><dd id="p1-val">0.25, 0.10</dd></div>
+          <div><dt>P2</dt><dd id="p2-val">0.25, 1.00</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section id="principle" class="section">
+    <div class="section-head reveal">
+      <p class="kicker">02 / How it works</p>
+      <h2>曲线是怎么被画出来的</h2>
+      <p class="sub">三个概念就够了：端点、控制点、以及把控制点当作「引力」。</p>
+    </div>
+    <div class="cards reveal">
+      <article class="card">
+        <span class="num">01</span>
+        <h3>端点固定</h3>
+        <p>左下角是 0，右上角是 1。曲线从起点出发，最终必须落在终点，不偏不倚。</p>
+      </article>
+      <article class="card">
+        <span class="num">02</span>
+        <h3>控制点牵引</h3>
+        <p>控制点像磁铁。它离端点越近，曲线起步就越贴近直线；拉远，曲线就被甩出弧度。</p>
+      </article>
+      <article class="card">
+        <span class="num">03</span>
+        <h3>转换成 CSS</h3>
+        <p>横纵坐标归一化后，就是四个数字。浏览器用它计算每一帧的进度，比手写关键帧省事得多。</p>
+      </article>
+    </div>
+    <div class="formula reveal">
+      <code>cubic-bezier(<span>x1</span>, <span>y1</span>, <span>x2</span>, <span>y2</span>)</code>
+      <p>其中 x 必须在 0–1 之间，y 可以越界 —— 这就是「回弹」效果的来源。</p>
+    </div>
+  </section>
+
+  <section id="works" class="section">
+    <div class="section-head reveal">
+      <p class="kicker">03 / Works</p>
+      <h2>曲线落地的地方</h2>
+      <p class="sub">一个小程序工作台：日记、旅行足迹、电子衣橱。设计稿里的曲线，被一条条还原成了真实交互。</p>
+    </div>
+
+    <div class="phones reveal">
+      <figure class="phone phone-diary">
+        <div class="phone-body">
+          <div class="statusbar"><span>9:41</span><span class="pills"><i></i><i></i><i></i></span></div>
+          <p class="app-title">日记</p>
+          <p class="app-date">11 月 20 日 · 晴</p>
+          <div class="entry">
+            <span class="dotline"></span>
+            <div><b>今天把曲线调顺了</b><span class="lines"><i></i><i></i></span></div>
+          </div>
+          <div class="entry">
+            <span class="dotline"></span>
+            <div><b>旅行清单 +1</b><span class="lines"><i></i><i></i><i class="short"></i></span></div>
+          </div>
+          <div class="entry dim">
+            <span class="dotline"></span>
+            <div><b>旧照片整理</b><span class="lines"><i></i></span></div>
+          </div>
+        </div>
+        <figcaption>日记 · 本地优先，云端同步</figcaption>
+      </figure>
+
+      <figure class="phone phone-travel">
+        <div class="phone-body">
+          <div class="statusbar"><span>9:41</span><span class="pills"><i></i><i></i><i></i></span></div>
+          <p class="app-title">旅行足迹</p>
+          <div class="map">
+            <span class="map-shape map-a"></span>
+            <span class="map-shape map-b"></span>
+            <span class="map-shape map-c"></span>
+            <span class="pin pin-1"></span>
+            <span class="pin pin-2"></span>
+            <span class="pin pin-3"></span>
+            <span class="pin pin-4"></span>
+          </div>
+          <div class="stat-row">
+            <div><b>12</b><span>个省级行政区</span></div>
+            <div><b>37</b><span>座城市</span></div>
+          </div>
+        </div>
+        <figcaption>足迹地图 · canvas 绘制边界</figcaption>
+      </figure>
+
+      <figure class="phone phone-wardrobe">
+        <div class="phone-body">
+          <div class="statusbar"><span>9:41</span><span class="pills"><i></i><i></i><i></i></span></div>
+          <p class="app-title">电子衣橱</p>
+          <div class="filters"><span class="on">全部</span><span>上衣</span><span>外套</span></div>
+          <div class="grid">
+            <span class="item i1"></span>
+            <span class="item i2"></span>
+            <span class="item i3"></span>
+            <span class="item i4"></span>
+            <span class="item i5"></span>
+            <span class="item i6"></span>
+          </div>
+        </div>
+        <figcaption>衣橱 · 本地抠图后上云</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="cta reveal">
+    <h2>先调顺这一条曲线</h2>
+    <p>剩下的，交给设计感和耐心。</p>
+    <a class="btn primary" href="#playground">回到实验室</a>
+  </section>
+</main>
+
+<footer>
+  <p>Bézier Lab · 用贝塞尔曲线还原设计稿</p>
+  <p class="muted">基于同名微信小程序项目整理 · <a href="https://github.com/nanshanyibei/Bezier_curve_in_minapp" target="_blank" rel="noreferrer">源码</a></p>
+</footer>
+
+<script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<view class="page detail-page">
+
+  <!-- 搭配图 -->
+  <view class="shot" bindtap="onPreview">
+    <image wx:if="{{image}}" class="shot-img" src="{{image}}" mode="aspectFit" />
+    <view wx:else class="shot-img shot-ph">搭配图</view>
+  </view>
+
+  <!-- 基本信息 -->
+  <view class="info">
+    <view class="name">{{name}}</view>
+    <view class="date text-dim">{{dateText}}</view>
+  </view>
+
+  <!-- 衣物清单 -->
+  <view class="section">
+    <view class="section-title">这套搭配</view>
+    <view class="item" wx:for="{{items}}" wx:key="id">
+      <view class="item-icon">{{item.emoji}}</view>
+      <view class="item-body">
+        <view class="item-name {{item.exists ? '' : 'gone'}}">{{item.name}}</view>
+        <view class="item-meta text-dim">{{item.categoryLabel}}{{item.exists ? '' : ' · 衣物已删除'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="bottom-space"></view>
+
+  <view class="delete-btn" bindtap="onDelete">删除这套搭配</view>
+
+</view>

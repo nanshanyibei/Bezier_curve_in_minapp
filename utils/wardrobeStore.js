@@ -4,7 +4,7 @@
  * entry = {
  *   id:        'w_<createdAt>_<rand>'    // 一物一条
  *   name:      '白色针织开衫'             // 必填，≤40 字
- *   category:  'top'                     // top/bottom/outer/shoes/accessory
+ *   category:  'top'                     // top/bottom/outer/shoes/bag/accessory
  *   color:     '米白'                     // 选填，≤20 字
  *   season:    'all'                     // all/spring/summer/autumn/winter
  *   note:      ''                        // 选填，≤500 字
@@ -29,7 +29,8 @@ const CATEGORIES = [
   { key: 'top', label: '上装', emoji: '👕' },
   { key: 'bottom', label: '下装', emoji: '👖' },
   { key: 'outer', label: '外套', emoji: '🧥' },
-  { key: 'shoes', label: '鞋包', emoji: '👜' },
+  { key: 'shoes', label: '鞋', emoji: '👟' },
+  { key: 'bag', label: '包', emoji: '👜' },
   { key: 'accessory', label: '配饰', emoji: '🧣' }
 ];
 

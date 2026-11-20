@@ -32,6 +32,15 @@ node scripts/build.js prod
 
 然后：开发者工具 → 导入项目 → 选 `dist/prod` → 上传。
 
+### 云开发集合
+
+在微信开发者工具「云开发 → 数据库」中创建以下集合，权限均设为「仅创建者可读写」：
+
+- `wardrobe`：衣物
+- `wardrobe_outfits`：搭配
+
+未创建集合时，衣橱与搭配仍可正常使用，只是数据仅保存在本机。
+
 ### 只改线上（不碰 AI）的代码标记规则
 
 需要区分环境的片段用注释包裹，构建时整块删除：
@@ -58,5 +67,7 @@ onDevOnly() {}
 - `pages/travel/list` 足迹清单（省级分组、覆盖率、点条目回地图定位）
 - `pages/travel/memory` 城市回忆册 + 编辑页（一城多条、文字/照片/日期，照片存本地永久路径并异步上云换 fileID，失败降级本地展示）
 - `pages/travel/spot` 5A 景区详情（骨架随包 + 内容走云端 `attraction_details`，去过/想去记在 `spot_marks`，见 `docs/5a-content-architecture.md`）
-- `pages/wardrobe` 电子衣橱（衣物增删改、分类/季节筛选；照片可在本地做白平衡、白底方图与纯色背景抠图，输出 JPG 后上传；数据存本地 `wardrobe.items` 与云端 `wardrobe` 集合）
+- `pages/wardrobe` 电子衣橱（衣物增删改、分类/季节筛选；照片可在本地做白平衡、白底方图与纯色背景抠图；顶部可切换「衣物 / 搭配」；数据存本地 `wardrobe.items` 与云端 `wardrobe` 集合）
+- `pages/wardrobe/outfit` 新建搭配（上装/下装/鞋必选，包可选 1 件、配饰最多 2 件；本地 Canvas 生成 800×800 白底搭配图，数据存本地 `wardrobe.outfits` 与云端 `wardrobe_outfits` 集合）
+- `pages/wardrobe/outfit/detail` 搭配详情（大图、衣物快照、删除）
 - `pages/my` 我的（数据概览、隐私指引）

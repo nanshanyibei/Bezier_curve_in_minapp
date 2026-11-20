@@ -26,7 +26,7 @@ const TOP_ENTRIES = ['app.js', 'app.json', 'app.wxss', 'config.js', 'sitemap.jso
 const DROP_PAGES = ['assistant', 'insight'];
 
 /** 生产包剔除的工具模块（相对 utils/） */
-const DROP_UTILS = ['ai.js', 'sse.js', 'insightPrompt.js', 'insightParse.js'];
+const DROP_UTILS = ['ai.js', 'sse.js', 'insightPrompt.js', 'insightParse.js', 'markdown.js'];
 
 /** 生产包页面清单，顺序即注册顺序 */
 const PROD_PAGES = [
@@ -38,6 +38,8 @@ const PROD_PAGES = [
   'pages/travel/spot/spot',
   'pages/wardrobe/wardrobe',
   'pages/wardrobe/edit/edit',
+  'pages/wardrobe/outfit/outfit',
+  'pages/wardrobe/outfit/detail/detail',
   'pages/my/my',
   'pages/my/privacy/privacy'
 ];

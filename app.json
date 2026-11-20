@@ -8,6 +8,8 @@
     "pages/travel/spot/spot",
     "pages/wardrobe/wardrobe",
     "pages/wardrobe/edit/edit",
+    "pages/wardrobe/outfit/outfit",
+    "pages/wardrobe/outfit/detail/detail",
     "pages/assistant/assistant",
     "pages/insight/insight",
     "pages/my/my",

@@ -128,6 +128,13 @@
   word-break: break-all;
 }
 
+/* AI 正文（rich-text）：内层节点样式在 utils/markdown.js 里以内联 style 给出 */
+.content-md {
+  display: block;
+  font-size: 28rpx;
+  line-height: 1.65;
+}
+
 /* 光标 */
 .caret {
   display: inline-block;

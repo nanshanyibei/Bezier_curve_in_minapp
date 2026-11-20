@@ -1,4 +1,5 @@
 const ai = require('../../utils/ai');
+const md = require('../../utils/markdown');
 const cb = require('../../utils/cb');
 const config = require('../../config');
 
@@ -19,6 +20,14 @@ const SYSTEM_PROMPT = [
 const SUGGESTIONS = ['周末京郊去哪玩？', '3 天短途行程怎么排？', '出差顺路有什么好吃的？'];
 
 let idSeq = Date.now();
+
+/** 历史消息补齐渲染节点（AI 正文用 rich-text 展示 markdown，用户消息保持原文） */
+function withNodes(messages) {
+  return (messages || []).map((m) => {
+    if (m.role !== 'assistant') return m;
+    return Object.assign({}, m, { nodes: md.toNodes(m.content) });
+  });
+}
 
 Page({
   data: {
@@ -44,7 +53,7 @@ Page({
   onLoad() {
     this.setData({ hasKey: ai.hasApiKey() });
     const cached = wx.getStorageSync(HISTORY_KEY);
-    if (Array.isArray(cached)) this.setData({ messages: cached });
+    if (Array.isArray(cached)) this.setData({ messages: withNodes(cached) });
     this.pullCloudHistory();
   },
 
@@ -56,7 +65,7 @@ Page({
       if (!doc || !Array.isArray(doc.messages) || !doc.messages.length) return;
       const localT = Number(wx.getStorageSync(HISTORY_TS_KEY) || 0);
       if ((doc.updatedAt || 0) <= localT) return;
-      this.setData({ messages: doc.messages });
+      this.setData({ messages: withNodes(doc.messages) });
       wx.setStorageSync(HISTORY_KEY, doc.messages);
       wx.setStorageSync(HISTORY_TS_KEY, doc.updatedAt || 0);
       this.scrollToEnd();
@@ -94,7 +103,8 @@ Page({
       thinking: '',
       thinkOpen: false,
       streaming: true,
-      elapsedMs: 0
+      elapsedMs: 0,
+      nodes: []
     };
     const messages = this.data.messages.concat([userMsg, replyMsg]);
     this.replyIndex = messages.length - 1;
@@ -194,7 +204,11 @@ Page({
     if (pending > 0) {
       const step = Math.min(6, 1 + Math.floor(pending / 80));
       this.shownLen = Math.min(this.fullBuf.length, this.shownLen + step);
-      this.setData({ ['messages[' + i + '].content']: this.fullBuf.slice(0, this.shownLen) });
+      const shown = this.fullBuf.slice(0, this.shownLen);
+      this.setData({
+        ['messages[' + i + '].content']: shown,
+        ['messages[' + i + '].nodes']: md.toNodes(shown)
+      });
     }
 
     // 收尾：网络结束 + 正文追平
@@ -228,6 +242,7 @@ Page({
       const elapsed = Date.now() - (this.startedAt || Date.now());
       this.setData({
         ['messages[' + i + '].content']: this.fullBuf,
+        ['messages[' + i + '].nodes']: md.toNodes(this.fullBuf),
         ['messages[' + i + '].thinking']: this.thinkingBuf,
         ['messages[' + i + '].streaming']: false,
         ['messages[' + i + '].elapsedMs']: elapsed,

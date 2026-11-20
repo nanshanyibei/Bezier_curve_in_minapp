@@ -30,8 +30,9 @@
           <view wx:if="{{item.thinkOpen}}" class="think-body">{{item.thinking}}</view>
         </view>
 
-        <!-- 正文 -->
-        <text user-select class="content {{item.streaming && !item.content ? 'invisible' : ''}}">{{item.content}}</text>
+        <!-- 正文：用户消息保持原文，AI 回复按 markdown 渲染 -->
+        <text wx:if="{{item.role === 'user'}}" user-select class="content">{{item.content}}</text>
+        <rich-text wx:else user-select class="content content-md" nodes="{{item.nodes}}" />
 
         <!-- 等待首字 -->
         <view wx:if="{{item.streaming && !item.content}}" class="dots"><view/><view/><view/></view>

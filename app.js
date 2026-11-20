@@ -56,11 +56,13 @@ function syncFromCloud() {
   var travelStore = require('./utils/travelStore');
   var diaryStore = require('./utils/diaryStore');
   var wardrobeStore = require('./utils/wardrobeStore');
+  var outfitStore = require('./utils/outfitStore');
   return Promise.all([
     travelStore.pullCloud(),
     diaryStore.pullCloud(),
-    // 先补推本地未同步的衣物，再拉云端，避免本地新数据被远端旧数据覆盖
-    wardrobeStore.syncPending().then(function () { return wardrobeStore.pullCloud(); })
+    // 先补推本地未同步的衣物/搭配，再拉云端，避免本地新数据被远端旧数据覆盖
+    wardrobeStore.syncPending().then(function () { return wardrobeStore.pullCloud(); }),
+    outfitStore.syncPending().then(function () { return outfitStore.pullCloud(); })
   ]);
 }
 

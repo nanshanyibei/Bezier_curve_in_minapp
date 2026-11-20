@@ -1,0 +1,61 @@
+<view class="page outfit-page">
+
+  <scroll-view scroll-y class="body" enhanced show-scrollbar="{{false}}">
+
+    <!-- 实时预览 -->
+    <view class="preview-card">
+      <view class="preview-box">
+        <image wx:if="{{preview && !previewError}}" class="preview-img" src="{{preview}}" mode="aspectFit" />
+        <view wx:elif="{{previewError}}" class="preview-state">
+          <text>预览生成失败</text>
+          <view class="retry" bindtap="onRetryPreview">点击重试</view>
+        </view>
+        <view wx:else class="preview-state">
+          <text>生成中…</text>
+        </view>
+        <view wx:if="{{generating && preview && !previewError}}" class="preview-badge">生成中</view>
+      </view>
+      <view class="preview-tip text-dim">白底搭配图 · 上装在上，下装在中，鞋在下</view>
+    </view>
+
+    <!-- 选衣 -->
+    <view class="group" wx:for="{{groups}}" wx:key="key" wx:for-item="group">
+      <view class="group-head">
+        <text class="group-title">{{group.title}}</text>
+        <text class="group-tip text-dim">{{group.tip}}</text>
+      </view>
+
+      <scroll-view wx:if="{{group.items.length}}" scroll-x class="items-row" enhanced show-scrollbar="{{false}}">
+        <view class="pick" wx:for="{{group.items}}" wx:key="id"
+              data-group="{{group.key}}" data-id="{{item.id}}" bindtap="onPick">
+          <view class="pick-thumb {{item.selected ? 'on' : ''}}">
+            <image wx:if="{{item.display}}" class="pick-img" src="{{item.display}}" mode="aspectFill" />
+            <view wx:else class="pick-img pick-ph">{{item.emoji}}</view>
+            <view wx:if="{{item.selected}}" class="pick-check">✓</view>
+          </view>
+          <view class="pick-name">{{item.name}}</view>
+        </view>
+        <view class="row-tail"></view>
+      </scroll-view>
+
+      <view wx:else class="group-empty">
+        <text class="text-dim">这个分类还没有衣物</text>
+        <text class="link" data-cat="{{group.addCategory}}" bindtap="onGoAdd">去添加</text>
+      </view>
+    </view>
+
+    <view class="bottom-space"></view>
+  </scroll-view>
+
+  <!-- 底部保存 -->
+  <view class="footer">
+    <view class="footer-main">
+      <view class="save-btn {{canSave ? '' : 'disabled'}}" bindtap="onSave">{{saving ? '保存中…' : '保存搭配'}}</view>
+      <view wx:if="{{missing.length}}" class="missing text-dim">还缺：{{missingText}}</view>
+    </view>
+  </view>
+
+  <!-- 隐藏搭配画布 -->
+  <canvas type="2d" id="outfitCanvas" class="work-canvas" />
+
+</view>

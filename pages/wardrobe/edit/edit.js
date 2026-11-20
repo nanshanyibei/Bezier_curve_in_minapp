@@ -90,6 +90,11 @@ Page({
   onLoad(options) {
     this._photoToken = 0; // 防止图片异步流程在删除/重选后回写旧状态
     const patch = { bgMode: readMode() };
+    // 从「新建搭配」的缺衣提示跳转过来时，默认选中对应分类
+    if (options && options.category
+      && wardrobeStore.CATEGORIES.some(function (c) { return c.key === options.category; })) {
+      patch.category = options.category;
+    }
     if (options && options.id) {
       const hit = wardrobeStore.get(options.id);
       if (hit) {
