@@ -6,6 +6,8 @@
     "pages/travel/memory/memory",
     "pages/travel/memory/edit/edit",
     "pages/travel/spot/spot",
+    "pages/wardrobe/wardrobe",
+    "pages/wardrobe/edit/edit",
     "pages/assistant/assistant",
     "pages/insight/insight",
     "pages/my/my",
@@ -46,6 +48,12 @@
         "text": "旅行",
         "iconPath": "assets/tab/travel.png",
         "selectedIconPath": "assets/tab/travel-active.png"
+      },
+      {
+        "pagePath": "pages/wardrobe/wardrobe",
+        "text": "衣橱",
+        "iconPath": "assets/tab/wardrobe.png",
+        "selectedIconPath": "assets/tab/wardrobe-active.png"
       },
       {
         "pagePath": "pages/assistant/assistant",

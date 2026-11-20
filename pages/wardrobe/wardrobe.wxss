@@ -1,0 +1,168 @@
+.wardrobe-page {
+  padding: 24rpx 24rpx 160rpx;
+}
+
+/* 概览 */
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 8rpx 4rpx;
+  margin-bottom: 24rpx;
+}
+
+.head-title {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.head-sub {
+  font-size: 22rpx;
+}
+
+/* 筛选 */
+.filter-block {
+  margin-bottom: 24rpx;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  margin-bottom: 14rpx;
+}
+
+.filter-row.seasons {
+  margin-bottom: 0;
+}
+
+.chip {
+  padding: 10rpx 24rpx;
+  border-radius: 999rpx;
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
+  color: var(--text-dim);
+  font-size: 24rpx;
+}
+
+.chip.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.season-chip {
+  padding: 8rpx 20rpx;
+  font-size: 22rpx;
+}
+
+/* 双列网格 */
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.cell {
+  width: calc(50% - 10rpx);
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+
+.cell-img {
+  display: block;
+  width: 100%;
+  height: 300rpx;
+  background: var(--bg-card-2);
+}
+
+.cell-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 80rpx;
+}
+
+.cell-body {
+  padding: 16rpx 20rpx 20rpx;
+}
+
+.cell-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cell-meta {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 空态 */
+.empty {
+  padding: 80rpx 0;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 100rpx;
+}
+
+.empty-title {
+  margin-top: 16rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.empty-desc {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+}
+
+.empty-btn {
+  display: inline-block;
+  margin-top: 32rpx;
+  padding: 16rpx 48rpx;
+  border-radius: 999rpx;
+  background: var(--accent);
+  color: #16161c;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.bottom-space {
+  height: 40rpx;
+}
+
+/* 悬浮添加 */
+.fab {
+  position: fixed;
+  right: 32rpx;
+  bottom: 40rpx;
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #16161c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.35);
+  z-index: 10;
+}
+
+.fab-plus {
+  font-size: 56rpx;
+  line-height: 1;
+  margin-top: -4rpx;
+}

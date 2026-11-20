@@ -1,0 +1,90 @@
+<view class="page edit-page">
+
+  <scroll-view scroll-y class="body" enhanced show-scrollbar="{{false}}">
+
+    <!-- 照片 -->
+    <view class="field">
+      <text class="label">照片</text>
+      <view class="photo-box">
+        <view wx:if="{{photo}}" class="photo">
+          <image wx:if="{{photo.display}}" class="photo-img" src="{{photo.display}}" mode="aspectFill"
+                 bindtap="onPreview" />
+          <view wx:else class="photo-img photo-empty">无图</view>
+
+          <view wx:if="{{photo.uploading}}" class="photo-badge">上传中</view>
+          <view wx:elif="{{photo.processing}}" class="photo-badge">处理中</view>
+          <view wx:elif="{{photo.failed}}" class="photo-badge warn" bindtap="onRetryPhoto">重试</view>
+
+          <view class="photo-del" catchtap="onRemovePhoto">×</view>
+        </view>
+
+        <view wx:else class="photo photo-add" bindtap="onPickPhoto">
+          <text class="photo-add-plus">+</text>
+          <text class="photo-add-text">添加照片</text>
+        </view>
+      </view>
+      <view wx:if="{{canvasOk}}" class="bg-modes">
+        <view wx:for="{{bgModes}}" wx:key="key"
+              class="chip {{bgMode === item.key ? 'on' : ''}}"
+              data-k="{{item.key}}" bindtap="onPickMode">{{item.label}}</view>
+      </view>
+      <view class="tip text-dim">拍摄建议：衣物平铺在白纸或白墙前，去背景更干净；也可用手机相册长按抠图后上传透明背景图，会自动铺白底。</view>
+    </view>
+
+    <!-- 名称 -->
+    <view class="field">
+      <text class="label">名称</text>
+      <input class="inp" value="{{name}}" maxlength="{{nameMax}}" bindinput="onNameInput"
+             placeholder="如：白色针织开衫" placeholder-class="ph" />
+    </view>
+
+    <!-- 分类 -->
+    <view class="field">
+      <text class="label">分类</text>
+      <view class="chips">
+        <view wx:for="{{categories}}" wx:key="key"
+              class="chip {{category === item.key ? 'on' : ''}}"
+              data-k="{{item.key}}" bindtap="onPickCategory">{{item.emoji}} {{item.label}}</view>
+      </view>
+    </view>
+
+    <!-- 颜色 -->
+    <view class="field">
+      <text class="label">颜色</text>
+      <input class="inp" value="{{color}}" maxlength="{{colorMax}}" bindinput="onColorInput"
+             placeholder="如：米白 / 藏青" placeholder-class="ph" />
+    </view>
+
+    <!-- 季节 -->
+    <view class="field">
+      <text class="label">季节</text>
+      <view class="chips">
+        <view wx:for="{{seasons}}" wx:key="key"
+              class="chip {{season === item.key ? 'on' : ''}}"
+              data-k="{{item.key}}" bindtap="onPickSeason">{{item.label}}</view>
+      </view>
+    </view>
+
+    <!-- 备注 -->
+    <view class="field field-note">
+      <text class="label">备注</text>
+      <textarea class="inp-text" value="{{note}}" maxlength="{{noteMax}}" bindinput="onNoteInput"
+                placeholder="版型、搭配、购买时间…" placeholder-class="ph"
+                auto-height show-confirm-bar="{{false}}" />
+      <view class="counter">{{noteCount}}/{{noteMax}}</view>
+    </view>
+
+    <view class="bottom-space"></view>
+  </scroll-view>
+
+  <!-- 底部操作 -->
+  <view class="footer">
+    <view wx:if="{{isEdit}}" class="btn-del" bindtap="onDelete">删除</view>
+    <view class="btn-save {{saving ? 'disabled' : ''}}" bindtap="onSave">{{saving ? '保存中…' : '保存'}}</view>
+  </view>
+
+  <!-- 隐藏工作画布：本地白底/去背景处理用 -->
+  <canvas type="2d" id="workCanvas" class="work-canvas" />
+  <canvas type="2d" id="outCanvas" class="work-canvas" />
+
+</view>

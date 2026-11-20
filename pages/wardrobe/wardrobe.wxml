@@ -1,0 +1,51 @@
+<view class="page wardrobe-page">
+
+  <!-- 概览 -->
+  <view class="head">
+    <view class="head-title">电子衣橱</view>
+    <view class="head-sub text-dim">共 {{stats.total}} 件{{stats.cats ? ' · ' + stats.cats + ' 类' : ''}}</view>
+  </view>
+
+  <!-- 筛选 -->
+  <view class="filter-block">
+    <view class="filter-row">
+      <view wx:for="{{categoryChips}}" wx:key="key"
+            class="chip {{filterCategory === item.key ? 'on' : ''}}"
+            data-k="{{item.key}}" bindtap="onFilterCategory">{{item.label}}</view>
+    </view>
+    <view class="filter-row seasons">
+      <view wx:for="{{seasonChips}}" wx:key="key"
+            class="chip season-chip {{filterSeason === item.key ? 'on' : ''}}"
+            data-k="{{item.key}}" bindtap="onFilterSeason">{{item.label}}</view>
+    </view>
+  </view>
+
+  <!-- 衣物网格 -->
+  <view class="grid" wx:if="{{items.length}}">
+    <view wx:for="{{items}}" wx:key="id" class="cell"
+          data-id="{{item.id}}" bindtap="onEdit" bindlongpress="onDelete">
+      <image wx:if="{{item.display}}" class="cell-img" src="{{item.display}}" mode="aspectFill" />
+      <view wx:else class="cell-img cell-ph">{{item.emoji}}</view>
+      <view class="cell-body">
+        <view class="cell-name">{{item.name}}</view>
+        <view class="cell-meta text-dim">{{item.categoryLabel}} · {{item.seasonLabel}}<text wx:if="{{item.color}}"> · {{item.color}}</text></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空态 -->
+  <view wx:if="{{!loading && !items.length}}" class="empty">
+    <view class="empty-icon">🧺</view>
+    <view class="empty-title">{{stats.total ? '这个筛选下没有衣物' : '衣橱还空着'}}</view>
+    <view class="empty-desc text-dim">{{stats.total ? '换个分类或季节看看' : '拍下第一件衣服，开始整理衣橱'}}</view>
+    <view wx:if="{{!stats.total}}" class="empty-btn" bindtap="onAdd">添加第一件</view>
+  </view>
+
+  <view class="bottom-space"></view>
+
+  <!-- 悬浮添加 -->
+  <view class="fab" bindtap="onAdd">
+    <text class="fab-plus">+</text>
+  </view>
+
+</view>

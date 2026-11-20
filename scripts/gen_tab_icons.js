@@ -57,6 +57,10 @@ const icons = {
     const dome = body < 0 && y > 47;
     return head < 0 || dome ? -1 : 1;
   },
+  // 衣橱: solid cabinet — filled rounded body with split door + handles as negative space
+  wardrobe(x, y) {
+    return sdRoundRect(x, y, 40.5, 40.5, 24, 27, 9);
+  },
   // 对话: solid speech bubble — filled rounded rect + thick tail
   chat(x, y) {
     const bubble = sdRoundRect(x, y, 40.5, 37, 26, 19, 13);
@@ -79,6 +83,13 @@ const holes = {
   travel(x, y) {
     return sdCircle(x, y, 40.5, 31, 7);
   },
+  wardrobe(x, y) {
+    // 中间门缝 + 两枚把手
+    const split = sdSegment(x, y, 40.5, 19, 40.5, 62) - 1.6;
+    const h1 = sdCircle(x, y, 34.5, 41, 2.2);
+    const h2 = sdCircle(x, y, 46.5, 41, 2.2);
+    return Math.min(split, h1, h2);
+  },
   chat(x, y) {
     // 三个省略点
     return Math.min(
@@ -91,6 +102,7 @@ const holes = {
 const holeHalfWidth = {
   diary: 1.8,
   travel: 0, // fill hole
+  wardrobe: 0,
   chat: 0,
 };
 

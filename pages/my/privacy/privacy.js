@@ -1,5 +1,6 @@
 const travelStore = require('../../../utils/travelStore');
 const diaryStore = require('../../../utils/diaryStore');
+const wardrobeStore = require('../../../utils/wardrobeStore');
 const cb = require('../../../utils/cb');
 
 // 对话记录本地缓存键（与 assistant 页保持一致）
@@ -31,6 +32,7 @@ Page({
         if (!res.confirm) return;
         wx.removeStorageSync(diaryStore.KEY);
         wx.removeStorageSync(travelStore.KEY);
+        wx.removeStorageSync(wardrobeStore.KEY);
         CHAT_KEYS.forEach((k) => wx.removeStorageSync(k));
         wx.showToast({ title: '已清除本机缓存', icon: 'success' });
       }
@@ -40,7 +42,7 @@ Page({
   clearCloud() {
     wx.showModal({
       title: '删除云端数据',
-      content: '将永久删除云端保存的全部日记、旅行标记与对话记录，无法恢复。',
+      content: '将永久删除云端保存的全部日记、旅行标记、衣橱数据与对话记录，无法恢复。',
       confirmText: '全部删除',
       confirmColor: '#ef7d7d',
       success: (res) => {
@@ -49,6 +51,7 @@ Page({
         Promise.all([
           cb.clearCollection('diaries'),
           cb.clearCollection('marks'),
+          cb.clearCollection('wardrobe'),
           cb.clearCollection('chats')
         ]).then((r) => {
           wx.hideLoading();
@@ -57,6 +60,7 @@ Page({
           if (!failed) {
             wx.removeStorageSync(diaryStore.KEY);
             wx.removeStorageSync(travelStore.KEY);
+            wx.removeStorageSync(wardrobeStore.KEY);
             CHAT_KEYS.forEach((k) => wx.removeStorageSync(k));
           }
           wx.showToast({

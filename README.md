@@ -27,7 +27,7 @@ node scripts/build.js prod
 1. 按白名单拷贝到 `dist/prod`
 2. 剔除 AI 页面（`pages/assistant`、`pages/insight`）与工具模块（`utils/ai.js`、`sse.js`、`insightPrompt.js`、`insightParse.js`）
 3. 剥离所有 `@dev:begin` / `@dev:end` 标记块（含日记 AI 分析入口、旅行页「AI 补充」入口）
-4. 重写 `app.json` 的 `pages`，并把 tabBar 裁成日记 / 旅行 / 我的
+4. 重写 `app.json` 的 `pages`，并把 tabBar 裁成日记 / 旅行 / 衣橱 / 我的
 5. 残留关键词校验（AI 字样、模型服务商等），命中即构建失败
 
 然后：开发者工具 → 导入项目 → 选 `dist/prod` → 上传。
@@ -50,7 +50,7 @@ onDevOnly() {}
 
 ## 目录约定
 
-- 底部 4 tab：日记 / 旅行 / 对话 / 我的，启动页为日记
+- 底部 5 tab：日记 / 旅行 / 衣橱 / 对话 / 我的，启动页为日记
 - `pages/diary` 日记（本地 + 云端同步，AI 分析入口在 dev 包）
 - `pages/assistant` AI 对话（dev 包，仅体验版自用）
 - `pages/insight` 日记 AI 分析（dev 包，仅体验版自用）
@@ -58,4 +58,5 @@ onDevOnly() {}
 - `pages/travel/list` 足迹清单（省级分组、覆盖率、点条目回地图定位）
 - `pages/travel/memory` 城市回忆册 + 编辑页（一城多条、文字/照片/日期，照片存本地永久路径并异步上云换 fileID，失败降级本地展示）
 - `pages/travel/spot` 5A 景区详情（骨架随包 + 内容走云端 `attraction_details`，去过/想去记在 `spot_marks`，见 `docs/5a-content-architecture.md`）
+- `pages/wardrobe` 电子衣橱（衣物增删改、分类/季节筛选；照片可在本地做白平衡、白底方图与纯色背景抠图，输出 JPG 后上传；数据存本地 `wardrobe.items` 与云端 `wardrobe` 集合）
 - `pages/my` 我的（数据概览、隐私指引）

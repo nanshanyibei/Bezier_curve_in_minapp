@@ -55,7 +55,13 @@ var syncPromise = cb.ready()
 function syncFromCloud() {
   var travelStore = require('./utils/travelStore');
   var diaryStore = require('./utils/diaryStore');
-  return Promise.all([travelStore.pullCloud(), diaryStore.pullCloud()]);
+  var wardrobeStore = require('./utils/wardrobeStore');
+  return Promise.all([
+    travelStore.pullCloud(),
+    diaryStore.pullCloud(),
+    // 先补推本地未同步的衣物，再拉云端，避免本地新数据被远端旧数据覆盖
+    wardrobeStore.syncPending().then(function () { return wardrobeStore.pullCloud(); })
+  ]);
 }
 
 /**
