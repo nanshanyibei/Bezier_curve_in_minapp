@@ -2,7 +2,7 @@
 
   <!-- 顶栏 -->
   <view class="topbar">
-    <view class="text-dim">{{hasKey ? '软考备考助手 · 本机 Key' : '软考备考助手 · 云端代理'}}</view>
+    <view class="text-dim">{{hasKey ? '旅行助手 · 本机 Key' : '旅行助手 · 云端代理'}}</view>
     <view class="topbar-btns">
       <text class="topbar-btn" bindtap="onClear">清空</text>
     </view>
@@ -11,8 +11,8 @@
   <!-- 消息列表 -->
   <scroll-view class="messages" scroll-y scroll-into-view="{{scrollInto}}" scroll-with-animation>
     <view wx:if="{{!messages.length}}" class="empty">
-      <view class="empty-title">软考备考助手</view>
-      <view class="empty-desc text-dim">多轮问答 · 知识点讲解 · 备考规划</view>
+      <view class="empty-title">旅行助手</view>
+      <view class="empty-desc text-dim">行程规划 · 目的地推荐 · 美食探店</view>
       <view class="sug-row">
         <view class="sug" wx:for="{{suggestions}}" wx:key="*this"
               data-text="{{item}}" bindtap="onSuggestionTap">{{item}}</view>
@@ -52,8 +52,9 @@
   <view class="composer">
     <textarea class="input" value="{{input}}" bindinput="onInput"
               confirm-type="send" bindconfirm="onSend"
+              show-confirm-bar="{{false}}"
               auto-height maxlength="-1" adjust-position
-              placeholder="问点什么，如：可用度怎么算？"
+              placeholder="问点什么，如：周末去哪玩？"
               disabled="{{busy}}" />
     <button wx:if="{{busy}}" class="btn-danger stop-btn" bindtap="stop">停止</button>
     <button wx:else class="btn send-btn" disabled="{{!canSend}}" bindtap="onSend">发送</button>
