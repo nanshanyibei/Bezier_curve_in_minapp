@@ -155,40 +155,60 @@ function rememberIds(collectionName, docs, keyOf) {
   });
 }
 
-/** 写入/删除时用云端现有的 _id（避免归一完成前又写出一份重复文档） */
+/**
+ * 写入/删除时的规范 _id：<身份键>_<业务键>。
+ * 集合权限靠 _openid 隔离，但 _id 在集合内全局唯一——两人写同一业务键
+ * （如同省 adcode、同一天 date、对话固定 history）会撞 _id，导致后者权限拒绝、
+ * 写入静默失败、换设备丢数据。带身份前缀后每人各写各的文档，互不干扰。
+ * 身份键未就绪（whoami 未部署/未登录）时退化为裸业务键，兼容纯本地单用户。
+ * 读取侧 normalizeIds 会把历史遗留的裸 _id 文档被动归一带前缀格式（见下）。
+ */
 function resolveId(collectionName, id) {
-  const m = _docIds[collectionName];
-  return (m && m[String(id)]) || String(id);
+  const u = getUserKey();
+  return u ? u + '_' + String(id) : String(id);
 }
 
+/**
+ * 读取后被动归一：把历史遗留的非规范 _id 文档改写成 <身份键>_<业务键>。
+ * 规范格式 = resolveId 生成的带前缀 id；旧格式（裸业务键 adcode/date、迁移前的 owner_业务键）
+ * 会在下次拉取时被重写为规范格式并删除旧文档（幂等，失败不阻塞，仅记日志）。
+ * 这样无需手动跑迁移脚本：用户升级后首次打开，旧数据自动归位，且不丢内容。
+ */
 function normalizeIds(collectionName, docs, keyOf) {
   if (!docs || !docs.length) return;
   rememberIds(collectionName, docs, keyOf);
 
   const col = db().collection(collectionName);
+  const u = getUserKey();
+  const canonicalOf = function (k) { return u ? u + '_' + String(k) : String(k); };
+
   const ids = {};
   docs.forEach((d) => { ids[String(d._id)] = true; });
 
   docs.forEach((d) => {
     const key = keyOf(d);
-    if (!key || String(d._id) === String(key)) return;
+    if (!key) return;
+    const canonicalId = canonicalOf(key);
+    if (String(d._id) === canonicalId) return; // 已是规范格式，不动
+
     const oldId = String(d._id);
     const m = _docIds[collectionName];
 
-    // 规范 id 已存在（通常是新版写入的文档），旧文档直接删掉
-    if (ids[String(key)]) {
+    // 规范 id 的文档已存在 → 旧文档是历史重复，直接删
+    if (ids[canonicalId]) {
       col.doc(oldId).remove()
-        .then(() => { if (m) m[String(key)] = String(key); })
+        .then(() => { if (m) m[String(key)] = canonicalId; })
         .catch((err) => console.error('[cb] 删除旧文档失败:', collectionName, oldId, (err && err.errMsg) || err));
       return;
     }
 
+    // 旧格式 → 重写成规范 id，再删旧文档（幂等自愈）
     const data = Object.assign({}, d);
     delete data._id;
     delete data._openid; // 由云开发按当前用户自动注入
-    col.doc(String(key)).set({ data: data })
+    col.doc(canonicalId).set({ data: data })
       .then(() => col.doc(oldId).remove())
-      .then(() => { if (m) m[String(key)] = String(key); })
+      .then(() => { if (m) m[String(key)] = canonicalId; })
       .catch((err) => {
         console.error('[cb] 归一 _id 失败:', collectionName, oldId, (err && err.errMsg) || err);
       });
@@ -215,7 +235,7 @@ function fetchMarks() {
   });
 }
 
-/** 写/删一条标记（status 空 = 删除），doc _id 即 adcode */
+/** 写/删一条标记（status 空 = 删除）；_id 经 resolveId 带身份前缀，避免多人标记同 adcode 时撞 _id */
 function pushMark(doc) {
   return ready().then(() => {
     if (!envConfigured()) return false;

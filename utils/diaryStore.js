@@ -1,7 +1,7 @@
 /**
  * 日记存储
  * - 本地 storage（key: diary.entries）作离线缓存：{ entries: [{ date, text, updatedAt }] }
- * - 云端 diaries 集合（经云函数 wxauth 网关，按 openid 隔离），_id = date
+ * - 云端 diaries 集合（wx.cloud 直连，按 _openid 隔离），_id 经 cb.resolveId 带身份前缀，避免多人同天撞 _id
  * - 写：本地即时生效 → 异步推云端；读：本地优先，pullCloud() 按 updatedAt 新者胜合并
  */
 const cb = require('./cb');

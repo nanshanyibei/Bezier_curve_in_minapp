@@ -1,23 +1,58 @@
 /**
  * 路线存储（key: travel.routes）
- * 结构 v1：{ v:1, routes:[{ id, name, status, stops:[{adcode,name,center}], hidden, createdAt, updatedAt }], updatedAt }
+ * 结构 v1：{ v:1, routes:[{ id, name, status, stops:[{adcode,name,center}], hidden, stampedAt, createdAt, updatedAt, synced }], updatedAt }
  * - 本地优先，所有操作即时落 storage，离线完全可用
- * - M1 无云端同步（M4 规划接 CloudBase routes 集合，整文档 updatedAt 新者胜）
+ * - 云端 routes 集合（M4 已实现）：_id 用路线 id（经 cb.resolveId 带身份前缀，防多人冲突），
+ *   按 _openid 隔离；写操作异步推云，pullCloud 按每条 updatedAt 新者胜合并，syncPending 启动补推
  * - stops 自带 center（选点时从图层 region.centerLL 取），渲染/里程不依赖图层查询
- * - status: 'plan'（规划中，虚线）| 'done'（已走完，实线）；hidden 为本地显隐态
+ * - status: 'plan'（规划中，虚线）| 'done'（已走完，实线）；hidden 为本地显隐态；synced 为云端同步标记
  */
 const KEY = 'travel.routes';
+const COLLECTION = 'routes';
 const geoRoute = require('./geoRoute');
+const cb = require('./cb');
 
 function loadAll() {
-  const d = wx.getStorageSync(KEY);
+  let d = null;
+  try { d = wx.getStorageSync(KEY); } catch (e) { d = null; }
   if (d && d.v === 1 && Array.isArray(d.routes)) return d;
   return { v: 1, routes: [], updatedAt: 0 };
 }
 
 function save(d) {
   d.updatedAt = Date.now();
-  wx.setStorageSync(KEY, d);
+  try { wx.setStorageSync(KEY, d); } catch (e) { /* 存不下不丢本次操作，下次 syncPending 补推 */ }
+}
+
+/** 转云端载荷 */
+function toPayload(r) {
+  return {
+    id: r.id,
+    name: r.name,
+    status: r.status,
+    stops: (r.stops || []).map(function (s) {
+      return { adcode: String(s.adcode), name: s.name || '', center: s.center || null };
+    }),
+    hidden: !!r.hidden,
+    stampedAt: r.stampedAt || 0,
+    createdAt: r.createdAt || 0,
+    updatedAt: r.updatedAt || 0
+  };
+}
+
+/** 标记本地某条路线的 synced 状态 */
+function markSynced(id, synced) {
+  const d = loadAll();
+  const r = d.routes.find(function (x) { return x.id === id; });
+  if (r) { r.synced = !!synced; save(d); }
+}
+
+/** 异步推一条到云端，成功后标记 synced；未配置云环境时 cb.setDoc 返回 false，自动降级 */
+function pushOne(r) {
+  if (!r) return;
+  cb.setDoc(COLLECTION, r.id, toPayload(r)).then(function (ok) {
+    if (ok) markSynced(r.id, true);
+  });
 }
 
 function getAll() {
@@ -82,6 +117,7 @@ function create(name, stops) {
   };
   d.routes.push(r);
   save(d);
+  pushOne(r);
   return r;
 }
 
@@ -91,6 +127,7 @@ function remove(id) {
   if (i < 0) return false;
   d.routes.splice(i, 1);
   save(d);
+  cb.removeDoc(COLLECTION, id);
   return true;
 }
 
@@ -100,7 +137,9 @@ function setHidden(id, hidden) {
   const r = d.routes.find((x) => x.id === id);
   if (!r) return false;
   r.hidden = !!hidden;
+  r.updatedAt = Date.now();
   save(d);
+  pushOne(r);
   return true;
 }
 
@@ -146,6 +185,7 @@ function rename(id, name) {
   r.name = trimmed;
   r.updatedAt = Date.now();
   save(d);
+  pushOne(r);
   return detail(id);
 }
 
@@ -160,6 +200,7 @@ function setStatus(id, status) {
   r.updatedAt = Date.now();
   if (next === 'done' && !r.stampedAt) r.stampedAt = Date.now(); // 首次打卡时间
   save(d);
+  pushOne(r);
   return { route: detail(id), became: became };
 }
 
@@ -179,6 +220,7 @@ function moveStop(id, index, dir) {
   r.stops[to] = tmp;
   r.updatedAt = Date.now();
   save(d);
+  pushOne(r);
   return detail(id);
 }
 
@@ -193,10 +235,68 @@ function removeStop(id, index) {
   r.stops.splice(i, 1);
   r.updatedAt = Date.now();
   save(d);
+  pushOne(r);
   return { ok: true, route: detail(id) };
 }
 
+/**
+ * 拉云端路线并按 updatedAt 新者胜合并，返回 { routes, changed }
+ * 云端不可用时 changed = false（走本地）
+ */
+function pullCloud() {
+  return cb.listDocs(COLLECTION).then(function (docs) {
+    if (!docs || !docs.length) return { routes: getAll(), changed: false };
+    const d = loadAll();
+    const map = {};
+    d.routes.forEach(function (r) { map[r.id] = r; });
+    let changed = false;
+    docs.forEach(function (raw) {
+      if (!raw || !raw.id) return;
+      const remote = {
+        id: String(raw.id),
+        name: raw.name || '',
+        status: raw.status === 'done' ? 'done' : 'plan',
+        stops: Array.isArray(raw.stops) ? raw.stops.map(function (s) {
+          return { adcode: String(s.adcode), name: s.name || '', center: s.center || null };
+        }) : [],
+        hidden: !!raw.hidden,
+        stampedAt: raw.stampedAt || 0,
+        createdAt: raw.createdAt || 0,
+        updatedAt: raw.updatedAt || 0,
+        synced: true
+      };
+      const cur = map[remote.id];
+      if (cur && (cur.updatedAt || 0) >= remote.updatedAt) return; // 本地更新，跳过
+      // hidden 是设备本地显隐偏好，不被远端覆盖（本地有则保留本地值）
+      if (cur) remote.hidden = !!cur.hidden;
+      map[remote.id] = remote;
+      changed = true;
+    });
+    if (changed) {
+      d.routes = Object.keys(map).map(function (k) { return map[k]; });
+      save(d);
+    }
+    return { routes: d.routes, changed: changed };
+  }).catch(function () {
+    return { routes: getAll(), changed: false };
+  });
+}
+
+/** 启动时补推未同步的路线（离线期间的改动），返回成功条数 */
+function syncPending() {
+  const pending = loadAll().routes.filter(function (r) { return !r.synced; });
+  if (!pending.length) return Promise.resolve(0);
+  return Promise.all(pending.map(function (r) {
+    return cb.setDoc(COLLECTION, r.id, toPayload(r)).then(function (ok) {
+      if (ok) markSynced(r.id, true);
+      return ok ? 1 : 0;
+    });
+  })).then(function (arr) {
+    return arr.reduce(function (a, b) { return a + b; }, 0);
+  });
+}
+
 module.exports = {
-  KEY, getAll, visible, list, totalKm, create, remove, setHidden,
-  get, detail, rename, setStatus, moveStop, removeStop
+  KEY, COLLECTION, getAll, visible, list, totalKm, create, remove, setHidden,
+  get, detail, rename, setStatus, moveStop, removeStop, pullCloud, syncPending
 };
