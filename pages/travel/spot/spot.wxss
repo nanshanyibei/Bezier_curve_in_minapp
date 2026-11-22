@@ -40,6 +40,19 @@
   letter-spacing: 8rpx;
 }
 
+/* 主图授权署名（CC BY / CC BY-SA 要求） */
+.hero-credit {
+  position: absolute;
+  right: 12rpx;
+  bottom: 8rpx;
+  max-width: 92%;
+  font-size: 18rpx;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.72);
+  text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.6);
+  text-align: right;
+}
+
 /* ---------- 标题区 ---------- */
 .head {
   padding: 32rpx 36rpx 0;

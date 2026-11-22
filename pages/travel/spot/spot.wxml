@@ -6,6 +6,7 @@
     <view class="hero hero-{{heroTone}}">
       <image wx:if="{{img}}" class="hero-img" src="{{img}}" mode="aspectFill" />
       <text wx:else class="hero-ph">{{initial}}</text>
+      <text wx:if="{{img && imgCredit}}" class="hero-credit">{{imgCredit}}</text>
     </view>
 
     <view class="head">

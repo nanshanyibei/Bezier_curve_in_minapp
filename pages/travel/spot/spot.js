@@ -108,6 +108,7 @@ Page({
       highlights: Array.isArray(s.highlights) ? s.highlights : [],
       info: info,
       tips: s.tips || '',
+      imgCredit: s.imgCredit || '',
       updatedAt: fmtMonth(s.updatedAt)
     });
 
