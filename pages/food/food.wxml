@@ -1,0 +1,79 @@
+<view class="page">
+
+  <!-- 标题区 -->
+  <view class="hero">
+    <view class="hero-title">今天吃什么</view>
+    <view class="text-dim hero-sub">随机抽一道家常菜，周末不再纠结 · 共 {{totalCount}} 道</view>
+  </view>
+
+  <!-- 筛选标签 -->
+  <scroll-view scroll-x class="tag-bar" wx:if="{{allTags.length}}">
+    <view class="chip {{activeTags.length === 0 ? 'chip-active' : ''}}" bindtap="onClearTags">全部</view>
+    <view wx:for="{{allTags}}" wx:key="*this"
+          class="chip {{activeTags.indexOf(item) >= 0 ? 'chip-active' : ''}}"
+          data-tag="{{item}}" bindtap="onToggleTag">{{item}}</view>
+  </scroll-view>
+  <view wx:if="{{activeTags.length}}" class="active-tags">
+    <text class="text-dim">已选：</text>
+    <text wx:for="{{activeTags}}" wx:key="*this" class="chip chip-sm">{{item}} ×</text>
+  </view>
+
+  <!-- 空态 -->
+  <view wx:if="{{ready && !pool.length}}" class="placeholder-page">
+    <view class="placeholder-icon">🫗</view>
+    <view class="placeholder-title">{{activeTags.length ? '筛选后没有匹配的菜' : '暂时还没有菜品'}}</view>
+    <view class="placeholder-desc">
+      {{activeTags.length ? '点一下「全部」试试，或者换几个标签' : '可能是云端预置菜还没导入，导入后点下面按钮重试'}}
+    </view>
+    <button class="btn" style="margin-top:40rpx;" bindtap="onRetry">重新加载</button>
+  </view>
+
+  <block wx:else>
+    <!-- 菜品卡片 -->
+    <view class="card dish-card {{picking ? 'dish-picking' : ''}}">
+      <view class="dish-emoji">{{currentDish ? currentDish.emoji : '🍽️'}}</view>
+      <view wx:if="{{currentDish}}" class="dish-name">{{currentDish.name}}</view>
+      <view wx:else class="dish-hint">点下面按钮开始抽菜</view>
+
+      <view wx:if="{{currentDish}}" class="text-dim dish-meta">
+        <text wx:if="{{currentDish.difficulty}}">难度 {{currentDish.difficulty}}</text>
+        <text wx:if="{{currentDish.timeMinutes}}"> · {{currentDish.timeMinutes}} 分钟</text>
+      </view>
+
+      <view wx:if="{{currentDish && currentDish.tags.length}}" class="dish-tags">
+        <text wx:for="{{currentDish.tags}}" wx:key="*this" class="dish-tag">{{item}}</text>
+      </view>
+    </view>
+
+    <!-- 双按钮 -->
+    <view class="btn-row">
+      <button class="btn btn-random" bindtap="onRandomTap" disabled="{{picking || !pool.length}}">
+        🔀 {{picking ? '抽菜中...' : '随机抽菜'}}
+      </button>
+      <button class="btn-ghost btn-accept" bindtap="onAccept" disabled="{{!currentDish}}">
+        ✓ 就它了
+      </button>
+    </view>
+
+    <!-- 底部快捷入口 -->
+    <view class="bottom-row">
+      <view class="quick-item" bindtap="onOpenDetail">
+        <view class="quick-icon">📖</view>
+        <view class="quick-label">详情</view>
+      </view>
+      <view class="quick-item" bindtap="onOpenFavorites">
+        <view class="quick-icon">♥</view>
+        <view class="quick-label">收藏 {{favCount}}</view>
+      </view>
+      <view class="quick-item" bindtap="onOpenHistory">
+        <view class="quick-icon">🕒</view>
+        <view class="quick-label">历史 {{historyCount}}</view>
+      </view>
+      <view class="quick-item" bindtap="onOpenCustom">
+        <view class="quick-icon">+</view>
+        <view class="quick-label">我的菜 {{customCount}}</view>
+      </view>
+    </view>
+  </block>
+
+</view>

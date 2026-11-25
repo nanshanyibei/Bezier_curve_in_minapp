@@ -12,19 +12,41 @@
   <scroll-view class="messages" scroll-y scroll-into-view="{{scrollInto}}" scroll-with-animation>
     <view wx:if="{{!messages.length}}" class="empty">
       <view class="empty-title">旅行助手</view>
-      <view class="empty-desc text-dim">行程规划 · 目的地推荐 · 美食探店</view>
+      <view class="empty-desc text-dim">查景点 · 看足迹 · 配穿搭 · 写日记</view>
       <view class="sug-row">
         <view class="sug" wx:for="{{suggestions}}" wx:key="*this"
               data-text="{{item}}" bindtap="onSuggestionTap">{{item}}</view>
       </view>
     </view>
 
-    <view wx:for="{{messages}}" wx:key="id" id="{{item.id}}"
+    <view wx:for="{{messages}}" wx:for-index="mi" wx:key="id" id="{{item.id}}"
           class="msg {{item.role === 'user' ? 'msg-user' : 'msg-ai'}}">
       <view class="bubble {{item.role === 'user' ? 'bubble-user' : 'bubble-ai'}}">
+        <!-- 工具调用步骤 -->
+        <view wx:if="{{item.steps.length}}" class="steps">
+          <view wx:for="{{item.steps}}" wx:for-item="step" wx:for-index="si" wx:key="id" class="step">
+            <view class="step-head">
+              <view class="step-dot {{step.status}}" />
+              <text class="step-label">{{step.label}}</text>
+              <text class="step-state text-dim">{{step.stateText}}</text>
+            </view>
+            <view wx:if="{{step.summary}}" class="step-summary">{{step.summary}}</view>
+
+            <!-- 写操作：先出草稿，用户确认后落库 -->
+            <view wx:if="{{step.confirm && !step.confirm.saved && !step.confirm.dismissed}}" class="confirm">
+              <view class="confirm-title">{{step.confirm.existing ? '当天已有日记，保存将覆盖' : '日记草稿'}}</view>
+              <view class="confirm-text">{{step.confirm.preview}}</view>
+              <view class="confirm-btns">
+                <view class="confirm-btn ghost" data-mi="{{mi}}" data-si="{{si}}" bindtap="onDismissStep">取消</view>
+                <view class="confirm-btn primary" data-mi="{{mi}}" data-si="{{si}}" bindtap="onConfirmSave">保存到日记</view>
+              </view>
+            </view>
+          </view>
+        </view>
+
         <!-- 思考过程 -->
         <view wx:if="{{item.thinking}}" class="think">
-          <view class="think-head" bindtap="toggleThink" data-i="{{index}}">
+          <view class="think-head" bindtap="toggleThink" data-i="{{mi}}">
             思考过程 · {{item.thinking.length}} 字 · {{item.thinkOpen ? '收起 ▴' : '展开 ▾'}}
           </view>
           <view wx:if="{{item.thinkOpen}}" class="think-body">{{item.thinking}}</view>
@@ -34,8 +56,8 @@
         <text wx:if="{{item.role === 'user'}}" user-select class="content">{{item.content}}</text>
         <rich-text wx:else user-select class="content content-md" nodes="{{item.nodes}}" />
 
-        <!-- 等待首字 -->
-        <view wx:if="{{item.streaming && !item.content}}" class="dots"><view/><view/><view/></view>
+        <!-- 等待首字（有工具步骤时不显示，步骤本身就在提示进度） -->
+        <view wx:if="{{item.streaming && !item.content && !item.steps.length}}" class="dots"><view/><view/><view/></view>
 
         <!-- 流式光标 -->
         <view wx:if="{{item.streaming && item.content}}" class="caret" />
@@ -55,7 +77,7 @@
               confirm-type="send" bindconfirm="onSend"
               show-confirm-bar="{{false}}"
               auto-height maxlength="-1" adjust-position
-              placeholder="问点什么，如：周末去哪玩？"
+              placeholder="问点什么，或让我帮你查/写"
               disabled="{{busy}}" />
     <button wx:if="{{busy}}" class="btn-danger stop-btn" bindtap="stop">停止</button>
     <button wx:else class="btn send-btn" disabled="{{!canSend}}" bindtap="onSend">发送</button>

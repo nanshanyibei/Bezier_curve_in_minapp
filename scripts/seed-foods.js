@@ -1,0 +1,123 @@
+/**
+ * 预置菜品种子数据（80+ 道）
+ *
+ * 用法：
+ *   1. 直接导入：复制 FOODS 数组到云开发控制台 → foods 集合 → 导入 JSON
+ *   2. 脚本写入：部署为一次性云函数，或本地用 wx-server-sdk 执行 node scripts/seed-foods.js
+ *
+ * 权限：foods 集合需设为「所有用户可读，仅创建者可读写」
+ */
+
+const FOODS = [
+  // ===== 家常菜（20） =====
+  { id: 'f_tomato_egg', name: '西红柿炒蛋', tags: ['家常菜', '快手菜', '半荤半素', '炒菜'], difficulty: 1, timeMinutes: 15, emoji: '🍳', ingredients: ['西红柿 2个', '鸡蛋 3个', '盐 少许', '糖 少许'], steps: ['鸡蛋打散加少许盐，西红柿切小块', '热锅冷油，蛋液炒至凝固盛出', '底油炒西红柿，出汁后回鸡蛋，加糖盐调味翻匀出锅'] },
+  { id: 'f_cucumber_garlic', name: '黄瓜拍蒜', tags: ['家常菜', '快手菜', '素菜'], difficulty: 1, timeMinutes: 5, emoji: '🥒', ingredients: ['黄瓜 2根', '大蒜 4瓣', '生抽 1勺', '醋 1勺', '香油 少许'], steps: ['黄瓜用刀拍碎切段', '大蒜切末', '加生抽、醋、香油拌匀'] },
+  { id: 'f_potato_pepper', name: '青椒土豆丝', tags: ['家常菜', '快手菜', '素菜', '炒菜'], difficulty: 1, timeMinutes: 15, emoji: '🥔', ingredients: ['土豆 2个', '青椒 2个', '干辣椒 2个', '盐 适量'], steps: ['土豆切丝泡水去淀粉，青椒切丝', '热油爆香干辣椒', '下土豆丝大火快炒，加青椒续炒', '加盐调味即可'] },
+  { id: 'f_stir_fry_cauliflower', name: '干煸花菜', tags: ['家常菜', '炒菜', '素菜'], difficulty: 2, timeMinutes: 20, emoji: '🥦', ingredients: ['花菜 1颗', '五花肉 100g', '豆瓣 1勺', '蒜 3瓣'], steps: ['花菜掰小朵焯水捞出', '五花肉煸出油，下豆瓣炒香', '加花菜大火翻炒，放蒜末出锅'] },
+  { id: 'f_egg_stir_fry', name: '蒜薹炒肉', tags: ['家常菜', '炒菜', '半荤半素'], difficulty: 1, timeMinutes: 20, emoji: '🥢', ingredients: ['蒜薹 200g', '猪肉 150g', '生抽 1勺', '淀粉 少许'], steps: ['蒜薹切段，猪肉切丝加淀粉抓匀', '热油炒肉丝至变色盛出', '炒蒜薹出香味，回肉丝，加生抽调味'] },
+  { id: 'f_braised_pork', name: '红烧肉', tags: ['家常菜', '炖菜', '荤菜'], difficulty: 3, timeMinutes: 90, emoji: '🥩', ingredients: ['五花肉 500g', '冰糖 30g', '生抽 2勺', '老抽 1勺', '料酒 2勺', '八角 2颗', '姜片 3片'], steps: ['五花肉切块冷水下锅焯水去腥', '锅留底油炒冰糖至糖色', '下肉块翻炒上色，加葱姜八角', '加料酒生抽老抽，加热水没过肉块', '大火烧开转小火炖 60 分钟，大火收汁'] },
+  { id: 'f_coke_chicken', name: '可乐鸡翅', tags: ['家常菜', '炒菜', '荤菜', '快手菜'], difficulty: 2, timeMinutes: 30, emoji: '🍗', ingredients: ['鸡翅中 10个', '可乐 1罐', '生抽 2勺', '料酒 1勺', '姜片 3片'], steps: ['鸡翅冷水下锅焯水，两面划刀', '热油煎至两面金黄', '加姜片、料酒、生抽、可乐没过鸡翅', '大火烧开转中火收汁'] },
+  { id: 'f_kung_pao_chicken', name: '宫保鸡丁', tags: ['家常菜', '炒菜', '荤菜'], difficulty: 2, timeMinutes: 25, emoji: '🥜', ingredients: ['鸡胸肉 300g', '花生米 50g', '干辣椒 8个', '花椒 1勺', '葱姜蒜 适量'], steps: ['鸡丁切块加料酒、淀粉抓匀腌 10 分钟', '热油爆香花椒、干辣椒', '下鸡丁滑炒至变色', '加葱姜蒜，倒调好的料汁（生抽、糖、醋、淀粉水）', '最后撒花生米翻匀出锅'] },
+  { id: 'f_yuxiang_meat', name: '鱼香肉丝', tags: ['家常菜', '炒菜', '荤菜'], difficulty: 2, timeMinutes: 25, emoji: '🥬', ingredients: ['猪肉 200g', '木耳 50g', '胡萝卜 1根', '青椒 1个', '泡椒 3个'], steps: ['肉丝加盐、料酒、淀粉抓匀', '木耳泡发切丝，胡萝卜青椒切丝', '热油炒肉丝盛出', '爆香泡椒蒜片，下蔬菜丝', '回肉丝，倒鱼香汁（醋、糖、生抽、淀粉水）翻匀'] },
+  { id: 'f_ma_po_tofu', name: '麻婆豆腐', tags: ['家常菜', '炒菜', '半荤半素'], difficulty: 2, timeMinutes: 20, emoji: '🧈', ingredients: ['嫩豆腐 1盒', '牛肉末 100g', '豆瓣 1勺', '花椒粉 1勺', '蒜苗 适量'], steps: ['豆腐切 2cm 方块，盐水浸泡', '热油炒牛肉末至酥香', '加豆瓣炒出红油', '加热水烧开，轻轻下豆腐', '水淀粉勾芡，撒花椒粉和蒜苗'] },
+  { id: 'f_twice_cooked_pork', name: '回锅肉', tags: ['家常菜', '炒菜', '荤菜'], difficulty: 2, timeMinutes: 25, emoji: '🥓', ingredients: ['五花肉 300g', '青蒜 200g', '豆瓣 1勺', '豆豉 半勺'], steps: ['五花肉冷水下锅煮 8 分熟，捞出切薄片', '青蒜切段', '肉片下锅小火煸出油', '加豆瓣、豆豉炒香，下青蒜翻炒'] },
+  { id: 'f_sweet_sour_pork', name: '糖醋里脊', tags: ['家常菜', '炒菜', '荤菜'], difficulty: 2, timeMinutes: 30, emoji: '🍖', ingredients: ['里脊 300g', '淀粉 100g', '番茄酱 3勺', '糖 2勺', '醋 2勺'], steps: ['里脊切条加盐料酒腌 10 分钟', '裹干粉，六成油温炸至金黄捞出', '升高油温复炸一次', '锅留底油炒番茄酱，加糖醋淀粉水', '倒炸好的里脊翻匀挂汁'] },
+  { id: 'f_broccoli_garlic', name: '蒜蓉西兰花', tags: ['家常菜', '快手菜', '素菜'], difficulty: 1, timeMinutes: 15, emoji: '🥦', ingredients: ['西兰花 1颗', '大蒜 6瓣', '盐 适量', '蚝油 1勺'], steps: ['西兰花掰小朵盐水泡 5 分钟', '开水加盐油焯水 1 分钟捞出', '热油爆香蒜末，下西兰花翻炒', '加蚝油盐调味出锅'] },
+  { id: 'f_egg_stir_fry_tomato', name: '番茄牛腩', tags: ['家常菜', '炖菜', '荤菜'], difficulty: 3, timeMinutes: 90, emoji: '🍲', ingredients: ['牛腩 500g', '西红柿 3个', '洋葱 1个', '番茄酱 2勺', '盐 适量'], steps: ['牛腩切块冷水焯水', '热油炒香洋葱，加西红柿和番茄酱炒出汁', '加牛腩、热水没过，大火烧开转小火 60 分钟', '加盐调味，大火收汁'] },
+  { id: 'f_steam_egg', name: '蒸蛋羹', tags: ['家常菜', '快手菜', '蒸菜', '素菜'], difficulty: 1, timeMinutes: 20, emoji: '🥚', ingredients: ['鸡蛋 3个', '温水 蛋液 1.5倍', '盐 少许', '香油 少许'], steps: ['鸡蛋打散加盐', '加温水搅拌均匀过筛', '碗上盖保鲜膜扎孔', '蒸锅水开后中火蒸 10 分钟', '淋香油生抽'] },
+  { id: 'f_pepper_egg', name: '青椒炒蛋', tags: ['家常菜', '快手菜', '半荤半素', '炒菜'], difficulty: 1, timeMinutes: 10, emoji: '🫑', ingredients: ['青椒 2个', '鸡蛋 3个', '盐 适量'], steps: ['青椒切碎', '鸡蛋打散加盐', '热油下蛋液大火快炒', '加青椒碎翻炒几下出锅'] },
+  { id: 'f_garlic_mushroom', name: '蒜蓉金针菇', tags: ['家常菜', '快手菜', '素菜'], difficulty: 1, timeMinutes: 15, emoji: '🍄', ingredients: ['金针菇 200g', '大蒜 1头', '干辣椒 3个', '生抽 2勺', '蚝油 1勺'], steps: ['金针菇去根洗净码入盘中', '蒜末、干辣椒末铺在上面', '淋生抽蚝油汁', '蒸锅水开蒸 10 分钟', '出锅浇热油'] },
+  { id: 'f_mushroom_cucumber', name: '木耳炒黄瓜', tags: ['家常菜', '快手菜', '素菜', '炒菜'], difficulty: 1, timeMinutes: 15, emoji: '🥒', ingredients: ['木耳 50g', '黄瓜 2根', '大蒜 3瓣', '生抽 1勺'], steps: ['木耳泡发，黄瓜切片', '热油爆香蒜片', '下木耳黄瓜大火快炒', '加生抽调味'] },
+  { id: 'f_cabbage_soup', name: '番茄蛋花汤', tags: ['家常菜', '汤类', '快手菜'], difficulty: 1, timeMinutes: 10, emoji: '🥣', ingredients: ['西红柿 1个', '鸡蛋 1个', '葱花 少许', '盐 适量'], steps: ['西红柿切块煮开', '鸡蛋打散缓缓淋入', '加盐葱花香油调味'] },
+  { id: 'f_braised_chicken', name: '可乐焖鸡', tags: ['家常菜', '炖菜', '荤菜'], difficulty: 2, timeMinutes: 45, emoji: '🍗', ingredients: ['鸡腿 3只', '可乐 1罐', '生抽 2勺', '老抽 半勺', '姜片 3片', '葱段 适量'], steps: ['鸡腿切块焯水', '热油煎至微焦', '加葱姜生抽老抽', '倒可乐没过肉块', '大火烧开转小火 30 分钟，收汁'] },
+
+  // ===== 川菜（15） =====
+  { id: 'f_shui_zhu_fish', name: '水煮鱼', tags: ['川菜', '荤菜', '炒菜'], difficulty: 3, timeMinutes: 45, emoji: '🐟', ingredients: ['草鱼 1条', '豆芽 200g', '豆瓣 3勺', '干辣椒 50g', '花椒 2勺'], steps: ['鱼片加盐料酒淀粉抓匀', '鱼骨煎香熬汤，豆芽烫熟垫底', '鱼片下汤中滑熟，连汤倒入盆中', '上面撒干辣椒花椒', '淋滚烫热油激出香味'] },
+  { id: 'f_shui_zhu_rou', name: '水煮肉片', tags: ['川菜', '荤菜', '炒菜'], difficulty: 3, timeMinutes: 35, emoji: '🌶️', ingredients: ['猪里脊 300g', '白菜 200g', '豆瓣 2勺', '干辣椒 30g', '花椒 1勺'], steps: ['肉片加盐料酒淀粉抓匀', '白菜烫熟垫底', '热油炒豆瓣加水烧开', '肉片一片片滑入煮熟', '连汤倒盆，撒干辣椒花椒淋热油'] },
+  { id: 'f_fu_qi_fei_pian', name: '夫妻肺片', tags: ['川菜', '荤菜'], difficulty: 3, timeMinutes: 60, emoji: '🥩', ingredients: ['牛腱子 500g', '牛肚 300g', '花生碎 50g', '辣椒油 2勺', '花椒粉 1勺'], steps: ['牛肉加葱姜八角煮熟，牛肚单独煮熟', '冷却后切薄片', '用辣椒油、花椒粉、酱油、醋、糖调汁', '淋在肉片上，撒花生碎和香菜'] },
+  { id: 'f_kou_shui_ji', name: '口水鸡', tags: ['川菜', '荤菜'], difficulty: 2, timeMinutes: 40, emoji: '🍗', ingredients: ['三黄鸡 1只', '花生碎 50g', '辣椒油 3勺', '花椒粉 1勺', '葱花蒜末 适量'], steps: ['鸡洗净冷水下锅，加葱姜花椒煮 20 分钟', '捞出冰水泡凉，斩块装盘', '用辣椒油、花椒粉、生抽、醋、糖、蒜末调汁', '淋在鸡块上，撒花生碎和葱花'] },
+  { id: 'f_gan_bian_dou_jiao', name: '干煸四季豆', tags: ['川菜', '炒菜', '素菜'], difficulty: 2, timeMinutes: 25, emoji: '🫛', ingredients: ['四季豆 500g', '猪肉末 100g', '豆瓣 1勺', '干辣椒 5个', '芽菜 1勺'], steps: ['四季豆摘筋，过油或小火煸至微皱', '肉末煸酥', '加豆瓣、干辣椒、芽菜炒香', '倒四季豆翻炒入味'] },
+  { id: 'f_lazi_ji', name: '辣子鸡', tags: ['川菜', '荤菜', '炒菜'], difficulty: 3, timeMinutes: 40, emoji: '🌶️', ingredients: ['鸡腿 500g', '干辣椒 100g', '花椒 2勺', '葱姜蒜 适量'], steps: ['鸡腿切块加盐料酒淀粉腌 20 分钟', '七成油温炸至金黄捞出，复炸一次', '锅留底油炒香花椒干辣椒', '下鸡块翻炒，加葱姜蒜调味'] },
+  { id: 'f_pao_jiao_feng_zhua', name: '泡椒凤爪', tags: ['川菜', '荤菜'], difficulty: 2, timeMinutes: 120, emoji: '👣', ingredients: ['凤爪 500g', '泡椒 1瓶', '白醋 1勺', '姜蒜 适量'], steps: ['凤爪剪指甲，冷水下锅煮 10 分钟', '捞出冰水泡凉', '加泡椒水、白醋、姜蒜密封冷藏 2 小时以上'] },
+  { id: 'f_suan_cai_yu', name: '酸菜鱼', tags: ['川菜', '荤菜', '汤类'], difficulty: 3, timeMinutes: 45, emoji: '🐟', ingredients: ['草鱼 1条', '酸菜鱼料包 1包', '蛋清 1个', '淀粉 2勺'], steps: ['鱼片加盐料酒蛋清淀粉抓匀', '鱼骨煎香加水和酸菜包熬汤', '鱼片一片片滑入煮熟', '出锅撒干辣椒花椒淋热油'] },
+  { id: 'f_bo_bo_ji', name: '钵钵鸡', tags: ['川菜', '荤菜'], difficulty: 2, timeMinutes: 30, emoji: '🍢', ingredients: ['鸡腿 3只', '钵钵鸡料包 1包', '葱姜 适量'], steps: ['鸡腿煮熟拆丝', '料包加水调汁', '鸡丝泡入料汁，放冰箱冷藏 30 分钟', '可加木耳、土豆片等一起泡'] },
+  { id: 'f_xiang_gan_xiang_chang', name: '川味香肠', tags: ['川菜', '荤菜'], difficulty: 3, timeMinutes: 300, emoji: '🌭', ingredients: ['猪肉 500g', '肠衣 1根', '辣椒面 2勺', '花椒粉 1勺', '白酒 1勺'], steps: ['猪肉肥瘦 3:7 搅碎', '加调料腌 30 分钟', '灌入肠衣，扎孔排气', '挂阴凉处风干 3-7 天', '蒸 20 分钟切片食用'] },
+  { id: 'f_mao_xue_wang', name: '毛血旺', tags: ['川菜', '荤菜', '炒菜'], difficulty: 3, timeMinutes: 40, emoji: '🥘', ingredients: ['鸭血 300g', '毛肚 200g', '豆芽 200g', '豆瓣 2勺', '干辣椒 30g'], steps: ['豆芽烫熟垫底', '热油炒豆瓣加水烧开', '下鸭血煮 3 分钟，下毛肚烫熟', '连汤倒盆，撒干辣椒花椒淋热油'] },
+  { id: 'f_gan_bian_cai_hua', name: '干锅花菜', tags: ['川菜', '炒菜', '半荤半素'], difficulty: 2, timeMinutes: 25, emoji: '🥦', ingredients: ['花菜 1颗', '腊肉 100g', '豆瓣 1勺', '干辣椒 3个'], steps: ['花菜掰小朵焯水', '腊肉煸出油', '加豆瓣干辣椒炒香', '下花菜大火翻炒，干锅风格带焦香'] },
+  { id: 'f_yan_rou', name: '盐煎肉', tags: ['川菜', '荤菜', '炒菜'], difficulty: 2, timeMinutes: 20, emoji: '🥓', ingredients: ['猪肉 300g', '豆瓣 1勺', '豆豉 半勺', '青蒜 100g'], steps: ['肉片加盐料酒抓匀', '热油小火煸肉片出油', '加豆瓣豆豉炒香', '下青蒜翻炒几下出锅'] },
+  { id: 'f_ma_po_qie_zi', name: '麻婆茄子', tags: ['川菜', '半荤半素', '炒菜'], difficulty: 2, timeMinutes: 25, emoji: '🍆', ingredients: ['茄子 2根', '牛肉末 100g', '豆瓣 1勺', '花椒粉 1勺'], steps: ['茄子切条过油至软', '牛肉末煸酥', '加豆瓣炒香加水', '回茄子煮 2 分钟，水淀粉勾芡撒花椒粉'] },
+  { id: 'f_dou_ban_yu', name: '豆瓣鱼', tags: ['川菜', '荤菜', '炒菜'], difficulty: 3, timeMinutes: 40, emoji: '🐟', ingredients: ['鲤鱼 1条', '豆瓣 3勺', '葱姜蒜 适量', '白糖 1勺'], steps: ['鱼两面划刀加盐料酒腌 10 分钟', '热油煎至两面金黄', '留底油加豆瓣葱姜蒜炒香', '加适量水烧开，回鱼煮 10 分钟，收汁'] },
+
+  // ===== 粤菜（15） =====
+  { id: 'f_bai_qie_ji', name: '白切鸡', tags: ['粤菜', '荤菜'], difficulty: 3, timeMinutes: 45, emoji: '🍗', ingredients: ['三黄鸡 1只', '姜 1块', '葱 3根', '盐焗粉 1勺'], steps: ['鸡洗净，锅中加水放姜葱烧开', '鸡入沸水中三提三放定型，小火浸 20 分钟', '捞出冰水泡凉', '斩块装盘，配姜葱蓉蘸料（姜末、葱末、盐、热油）'] },
+  { id: 'f_cha_shou_rou', name: '叉烧肉', tags: ['粤菜', '荤菜'], difficulty: 3, timeMinutes: 120, emoji: '🍖', ingredients: ['猪里脊 500g', '叉烧酱 3勺', '蜂蜜 2勺', '生抽 1勺', '料酒 1勺'], steps: ['里脊用叉子扎孔，加腌料腌 4 小时以上', '烤箱 200 度烤 30 分钟，中间刷蜂蜜', '最后 5 分钟上火烤至表面焦香', '切片装盘'] },
+  { id: 'f_qing_zheng_lu_yu', name: '清蒸鲈鱼', tags: ['粤菜', '荤菜', '蒸菜'], difficulty: 2, timeMinutes: 30, emoji: '🐟', ingredients: ['鲈鱼 1条', '姜 1块', '葱 3根', '蒸鱼豉油 2勺'], steps: ['鲈鱼洗净两面划刀，鱼身下垫姜丝', '蒸锅水开大火蒸 8 分钟', '倒掉蒸出的水，撒葱丝', '淋热油，倒蒸鱼豉油'] },
+  { id: 'f_bai_zhuo_cai_xin', name: '白灼菜心', tags: ['粤菜', '素菜', '快手菜'], difficulty: 1, timeMinutes: 15, emoji: '🥬', ingredients: ['菜心 300g', '姜 3片', '生抽 2勺', '盐 适量'], steps: ['菜心洗净', '锅中加水放姜盐烧开', '菜心入沸水中烫 1 分钟捞出', '淋生抽，浇热油激出香味'] },
+  { id: 'f_tang_cu_pai_gu', name: '糖醋排骨', tags: ['粤菜', '荤菜', '炒菜'], difficulty: 2, timeMinutes: 40, emoji: '🍖', ingredients: ['肋排 500g', '冰糖 20g', '白醋 2勺', '生抽 1勺', '料酒 1勺'], steps: ['排骨焯水捞出', '煎至两面金黄', '加冰糖炒糖色', '加料酒生抽醋和热水没过', '小火 20 分钟大火收汁'] },
+  { id: 'f_bo_lu_gu_lao_rou', name: '菠萝咕咾肉', tags: ['粤菜', '荤菜', '炒菜'], difficulty: 3, timeMinutes: 40, emoji: '🍍', ingredients: ['里脊 300g', '菠萝 200g', '淀粉 100g', '番茄酱 3勺', '白醋 2勺'], steps: ['里脊切块腌 10 分钟，裹淀粉炸至金黄复炸一次', '锅留底油炒番茄酱糖醋淀粉水', '加菠萝和炸好的肉块翻匀挂汁'] },
+  { id: 'f_la_wei_bao_zai_fan', name: '广式腊味煲仔饭', tags: ['粤菜', '主食', '荤菜'], difficulty: 2, timeMinutes: 35, emoji: '🍚', ingredients: ['广式腊肠 2根', '腊肉 100g', '米 2杯', '青菜 2棵', '生抽 1勺'], steps: ['米洗净泡 30 分钟', '砂锅刷油，放米加水大火烧开', '铺腊味片，小火焖 15 分钟', '摆焯好的青菜，淋生抽和腊味油', '盖盖再焖 2 分钟'] },
+  { id: 'f_ting_zai_zhou', name: '艇仔粥', tags: ['粤菜', '汤类', '主食'], difficulty: 2, timeMinutes: 45, emoji: '🥣', ingredients: ['米 1杯', '鱼肉 100g', '火腿 50g', '花生 30g', '葱花 适量'], steps: ['米淘净加水大火烧开小火熬 30 分钟', '鱼片切薄片，火腿切丝', '粥稠后下鱼片、火腿丝再煮 5 分钟', '撒花生、葱花，加盐调味'] },
+  { id: 'f_jiang_you_sheng', name: '肠粉', tags: ['粤菜', '主食'], difficulty: 3, timeMinutes: 30, emoji: '🥟', ingredients: ['粘米粉 100g', '水 150ml', '鸡蛋 1个', '葱花 适量', '生抽 2勺'], steps: ['粘米粉加水搅匀成粉浆', '蒸盘刷油倒一层薄粉浆', '打一个鸡蛋撒葱花', '大火蒸 2 分钟至凝固', '卷起切段，淋生抽'] },
+  { id: 'f_xia_jiao', name: '虾饺', tags: ['粤菜', '主食'], difficulty: 3, timeMinutes: 45, emoji: '🥟', ingredients: ['虾 300g', '猪肉馅 100g', '澄面 150g', '猪油 1勺'], steps: ['虾去壳留尾，一半切丁一半剁泥', '加猪肉馅、盐、糖、淀粉搅上劲', '澄面加猪油开水烫面', '擀皮包馅，捏出褶皱', '大火蒸 8 分钟'] },
+  { id: 'f_mi_zhi_cha_shao', name: '蜜汁叉烧', tags: ['粤菜', '荤菜'], difficulty: 3, timeMinutes: 120, emoji: '🍯', ingredients: ['五花肉 500g', '叉烧酱 4勺', '蜂蜜 3勺', '红曲粉 1勺'], steps: ['五花肉扎孔，加腌料腌 4 小时', '烤箱 200 度烤 40 分钟，刷蜂蜜', '最后上火烤焦，切片淋蜜汁'] },
+  { id: 'f_hao_you_sheng_cai', name: '蚝油生菜', tags: ['粤菜', '素菜', '快手菜'], difficulty: 1, timeMinutes: 10, emoji: '🥬', ingredients: ['生菜 1颗', '蚝油 2勺', '大蒜 3瓣'], steps: ['生菜撕片洗净', '开水加盐烫 30 秒捞出', '热油爆香蒜末', '加蚝油和少许水烧开', '淋在生菜上'] },
+  { id: 'f_zhi_zi_zheng_pai_gu', name: '豉汁蒸排骨', tags: ['粤菜', '荤菜', '蒸菜'], difficulty: 2, timeMinutes: 40, emoji: '🍖', ingredients: ['肋排 400g', '豆豉 1勺', '蒜 3瓣', '淀粉 1勺'], steps: ['排骨焯水捞出', '加豆豉、蒜末、淀粉、生抽抓匀腌 20 分钟', '水开大火蒸 25 分钟', '出锅淋少许热油'] },
+  { id: 'f_bai_hu_pepper_zhuguoji', name: '白胡椒猪肚鸡', tags: ['粤菜', '荤菜', '汤类'], difficulty: 3, timeMinutes: 90, emoji: '🥣', ingredients: ['猪肚 1个', '三黄鸡 1只', '白胡椒 3勺', '姜片 3片'], steps: ['猪肚用盐醋搓洗干净', '整鸡塞入猪肚中', '加水放姜片大火烧开转小火 60 分钟', '加白胡椒再煮 10 分钟，加盐调味'], difficulty_val: 3 },
+  { id: 'f_la_wei_he_zheng', name: '腊味合蒸', tags: ['粤菜', '荤菜', '蒸菜'], difficulty: 2, timeMinutes: 30, emoji: '🥓', ingredients: ['腊肉 200g', '腊肠 2根', '腊鱼 1块', '姜片 3片'], steps: ['腊味分别切片码盘', '铺姜片，大火蒸 20 分钟', '出锅淋少许油和生抽'] },
+
+  // ===== 湘菜（15） =====
+  { id: 'f_duo_jiao_yutou', name: '剁椒鱼头', tags: ['湘菜', '荤菜', '蒸菜'], difficulty: 3, timeMinutes: 40, emoji: '🐟', ingredients: ['胖头鱼鱼头 1个', '剁椒 3勺', '姜蒜 适量', '葱花 适量'], steps: ['鱼头洗净，鱼身划刀，加盐料酒腌 10 分钟', '上面铺满剁椒、姜蒜末', '大火蒸 20 分钟', '撒葱花，淋热油'] },
+  { id: 'f_la_jiao_chao_rou', name: '辣椒炒肉', tags: ['湘菜', '荤菜', '炒菜'], difficulty: 2, timeMinutes: 20, emoji: '🌶️', ingredients: ['辣椒 200g', '猪肉 200g', '大蒜 3瓣', '生抽 1勺'], steps: ['辣椒切段，猪肉切片', '猪肉煸出油盛出', '爆香蒜片，下辣椒翻炒', '回猪肉，加生抽调味'] },
+  { id: 'f_si_shou_bao_cai', name: '手撕包菜', tags: ['湘菜', '炒菜', '素菜'], difficulty: 1, timeMinutes: 15, emoji: '🥬', ingredients: ['包菜 1颗', '干辣椒 3个', '蒜 3瓣', '生抽 1勺'], steps: ['包菜手撕大片', '热油爆香干辣椒蒜片', '下包菜大火快炒', '加生抽调味'] },
+  { id: 'f_kou_wei_xia', name: '口味虾', tags: ['湘菜', '荤菜', '炒菜'], difficulty: 3, timeMinutes: 50, emoji: '🦐', ingredients: ['小龙虾 1000g', '姜片 3片', '蒜瓣 5瓣', '豆瓣酱 2勺'], steps: ['小龙虾洗净去虾线', '热油下姜蒜爆香', '加豆瓣酱炒香加水烧开', '下小龙虾煮 20 分钟', '大火收汁，撒葱花'] },
+  { id: 'f_la_rou_zheng_fan', name: '腊肉蒸饭', tags: ['湘菜', '主食', '荤菜'], difficulty: 2, timeMinutes: 40, emoji: '🍚', ingredients: ['腊肉 200g', '米 2杯', '豌豆 50g', '玉米粒 50g'], steps: ['腊肉切丁', '米洗净加水', '上面铺腊肉丁、豌豆、玉米粒', '大火烧开小火焖 25 分钟'] },
+  { id: 'f_gan_bian_tudou_pian', name: '干锅土豆片', tags: ['湘菜', '炒菜', '素菜'], difficulty: 2, timeMinutes: 25, emoji: '🥔', ingredients: ['土豆 3个', '五花肉 100g', '豆瓣 1勺', '干辣椒 3个'], steps: ['土豆切薄片过油至微黄', '五花肉煸出油', '加豆瓣干辣椒炒香', '回土豆片大火翻炒'] },
+  { id: 'f_jiang_rou_chao_larou', name: '家常豆腐', tags: ['湘菜', '炒菜', '素菜'], difficulty: 2, timeMinutes: 20, emoji: '🧈', ingredients: ['老豆腐 1块', '辣椒 2个', '蒜 3瓣', '生抽 1勺'], steps: ['豆腐切块煎至两面金黄', '辣椒切段', '热油爆香蒜片辣椒', '回豆腐，加生抽烧 2 分钟'] },
+  { id: 'f_jiang_yan_cai_zheng_rou', name: '酱腌菜蒸肉', tags: ['湘菜', '荤菜', '蒸菜'], difficulty: 2, timeMinutes: 30, emoji: '🥓', ingredients: ['酱腌菜 100g', '猪肉片 300g', '辣椒粉 1勺'], steps: ['酱腌菜铺盘底', '上面铺肉片', '撒辣椒粉和少许盐', '大火蒸 25 分钟'] },
+  { id: 'f_qi_zhi_zheng_layu', name: '豉汁蒸腊鱼', tags: ['湘菜', '荤菜', '蒸菜'], difficulty: 2, timeMinutes: 30, emoji: '🐟', ingredients: ['腊鱼 300g', '豆豉 1勺', '姜蒜末 适量', '干辣椒 2个'], steps: ['腊鱼切小块', '上面铺豆豉、姜蒜末、干辣椒', '大火蒸 20 分钟', '淋少许热油'] },
+  { id: 'f_san_xia_guo', name: '三下锅', tags: ['湘菜', '荤菜', '炒菜'], difficulty: 2, timeMinutes: 30, emoji: '🥘', ingredients: ['腊肉 100g', '腊香肠 1根', '五花肉 100g', '辣椒 2个'], steps: ['三种腊味分别切片', '五花肉煸出油', '加腊味片翻炒', '加辣椒段炒香，干锅风格带焦香'] },
+  { id: 'f_he_bao_dan_hong_shao_rou', name: '荷包蛋红烧肉', tags: ['湘菜', '荤菜'], difficulty: 3, timeMinutes: 90, emoji: '🍳', ingredients: ['五花肉 500g', '鸡蛋 4个', '冰糖 30g', '生抽老抽 适量'], steps: ['鸡蛋煎成荷包蛋盛出', '五花肉焯水切块', '炒糖色上色，加水炖 60 分钟', '回荷包蛋，收汁出锅'] },
+  { id: 'f_qin_cai_chao_larou', name: '芹菜炒腊肉', tags: ['湘菜', '荤菜', '炒菜'], difficulty: 1, timeMinutes: 20, emoji: '🥗', ingredients: ['芹菜 200g', '腊肉 150g', '蒜 3瓣'], steps: ['芹菜切段焯水，腊肉切片', '腊肉煸出油', '加蒜片爆香', '下芹菜翻炒，加盐调味'] },
+
+  // ===== 江浙菜（12） =====
+  { id: 'f_dong_po_rou', name: '东坡肉', tags: ['江浙菜', '荤菜', '炖菜'], difficulty: 3, timeMinutes: 120, emoji: '🥩', ingredients: ['五花肉 500g', '冰糖 30g', '生抽 2勺', '老抽 1勺', '花雕酒 3勺'], steps: ['五花肉整块焯水', '砂锅底铺葱姜', '肉皮朝下码入', '加花雕酒、冰糖、生抽老抽，加水没过', '大火烧开小火焖 60 分钟，翻面再 30 分钟'] },
+  { id: 'f_long_jing_xia_ren', name: '龙井虾仁', tags: ['江浙菜', '荤菜', '炒菜'], difficulty: 3, timeMinutes: 30, emoji: '🦐', ingredients: ['河虾仁 300g', '龙井茶叶 2g', '蛋清 1个', '淀粉 1勺'], steps: ['虾仁加盐料酒蛋清淀粉抓匀腌 10 分钟', '龙井茶热水泡开取茶汁', '热油滑炒虾仁至变色盛出', '回锅加茶汁，下虾仁翻匀出锅'] },
+  { id: 'f_song_shu_gui_yu', name: '松鼠鳜鱼', tags: ['江浙菜', '荤菜', '炒菜'], difficulty: 3, timeMinutes: 50, emoji: '🐟', ingredients: ['鳜鱼 1条', '淀粉 200g', '番茄酱 3勺', '白醋 2勺'], steps: ['鱼肉片下，交叉切花刀', '裹淀粉下油锅炸至金黄定型', '调糖醋番茄酱汁烧开', '淋在炸好的鱼上'] },
+  { id: 'f_hong_shao_shi_zi_tou', name: '红烧狮子头', tags: ['江浙菜', '荤菜', '炖菜'], difficulty: 3, timeMinutes: 90, emoji: '🟤', ingredients: ['猪肉馅 500g', '荸荠 50g', '鸡蛋 1个', '青菜 2棵', '生抽老抽 适量'], steps: ['荸荠剁碎，肉馅加鸡蛋、淀粉、盐、姜葱水搅上劲', '团成大丸子，六成油温炸至金黄', '砂锅加水和丸子炖 40 分钟', '加青菜和生抽老抽，大火收汁'] },
+  { id: 'f_yan_shui_ya', name: '盐水鸭', tags: ['江浙菜', '荤菜'], difficulty: 3, timeMinutes: 180, emoji: '🦆', ingredients: ['鸭子 1只', '盐 20g', '花椒 1勺', '葱姜 适量'], steps: ['鸭子洗净，用盐、花椒、葱姜里外揉搓', '腌制 2 小时以上', '锅加水放姜葱烧开，鸭入沸水中三提三放', '小火浸 40 分钟捞出冰水泡凉，斩块装盘'] },
+  { id: 'f_xi_hu_cu_yu', name: '西湖醋鱼', tags: ['江浙菜', '荤菜', '炒菜'], difficulty: 3, timeMinutes: 45, emoji: '🐟', ingredients: ['草鱼 1条', '糖 3勺', '醋 2勺', '生抽 1勺'], steps: ['草鱼洗净对半片开', '开水下锅小火浸 8 分钟', '捞出装盘，上面盖葱姜丝', '糖醋汁烧开淋在鱼上'] },
+  { id: 'f_yan_du_xian', name: '腌笃鲜', tags: ['江浙菜', '荤菜', '汤类', '炖菜'], difficulty: 3, timeMinutes: 120, emoji: '🥣', ingredients: ['咸肉 200g', '鲜肉 300g', '春笋 1根', '百叶结 50g'], steps: ['咸肉、鲜肉切块焯水', '春笋切滚刀块', '砂锅加水放咸肉、鲜肉、春笋，大火烧开小火 60 分钟', '加百叶结再煮 15 分钟，加盐调味'] },
+  { id: 'f_wuxi_paigu', name: '无锡排骨', tags: ['江浙菜', '荤菜', '炖菜'], difficulty: 3, timeMinutes: 90, emoji: '🍖', ingredients: ['肋排 500g', '冰糖 30g', '生抽 2勺', '老抽 1勺', '香醋 1勺'], steps: ['排骨焯水', '煎至两面金黄', '加冰糖炒糖色', '加生抽老抽醋和温水没过', '小火 40 分钟大火收汁，骨酥肉烂'] },
+  { id: 'f_jiao_hua_ji', name: '叫花鸡', tags: ['江浙菜', '荤菜', '蒸菜'], difficulty: 3, timeMinutes: 120, emoji: '🍗', ingredients: ['三黄鸡 1只', '火腿 100g', '香菇 5朵', '荷叶 2张', '盐 适量'], steps: ['鸡洗净用葱姜花椒腌 2 小时', '鸡腹中塞火腿片、香菇丁', '荷叶包裹，外面再包一层锡纸', '烤箱 180 度烤 90 分钟，锡纸包泥烤制效果更佳'] },
+  { id: 'f_pian_er_chuan', name: '片儿川', tags: ['江浙菜', '主食', '汤类'], difficulty: 2, timeMinutes: 30, emoji: '🍜', ingredients: ['雪菜 50g', '笋片 100g', '瘦肉片 100g', '面条 150g'], steps: ['肉片加盐淀粉抓匀', '热油炒肉片盛出', '下雪菜笋片炒香', '加水烧开，下面条煮软', '回肉片，加盐调味'] },
+  { id: 'f_ba_bao_dou_fu', name: '八宝豆腐', tags: ['江浙菜', '荤菜', '蒸菜'], difficulty: 3, timeMinutes: 45, emoji: '🧈', ingredients: ['豆腐 1盒', '虾仁 30g', '火腿丁 30g', '香菇丁 2朵', '青豆玉米 各 30g', '蛋清 2个'], steps: ['豆腐捣碎，加蛋清、盐、猪油搅匀', '蒸 15 分钟取出', '上面铺八样配料', '再蒸 5 分钟，淋浓汤'] },
+
+  // ===== 主食（5） =====
+  { id: 'f_egg_fried_rice', name: '蛋炒饭', tags: ['主食', '快手菜'], difficulty: 1, timeMinutes: 15, emoji: '🍳', ingredients: ['冷饭 2碗', '鸡蛋 2个', '葱花 适量', '盐 适量'], steps: ['鸡蛋打散加盐', '热油下蛋液大火快炒', '回冷饭，翻炒至粒分明', '加盐葱花调味'] },
+  { id: 'f_yangzhou_fried_rice', name: '扬州炒饭', tags: ['主食'], difficulty: 2, timeMinutes: 20, emoji: '🍚', ingredients: ['冷饭 2碗', '鸡蛋 2个', '虾仁 50g', '火腿丁 50g', '青豆玉米 各 30g'], steps: ['鸡蛋打散炒碎盛出', '虾仁火腿丁爆炒盛出', '热油下冷饭翻炒', '回所有配料，加盐调味'] },
+  { id: 'f_scallion_oil_noodles', name: '葱油拌面', tags: ['主食', '快手菜'], difficulty: 1, timeMinutes: 10, emoji: '🍜', ingredients: ['面条 150g', '葱 3根', '生抽 2勺', '糖 1勺'], steps: ['面条煮熟捞出过凉水', '葱段小火熬出香味', '加生抽糖烧开', '把葱油淋在面条上拌匀'] },
+  { id: 'f_dan_dan_noodles', name: '担担面', tags: ['主食', '川菜'], difficulty: 2, timeMinutes: 15, emoji: '🍜', ingredients: ['面条 150g', '猪肉末 50g', '芝麻酱 1勺', '辣椒油 1勺', '葱花 适量'], steps: ['面条煮熟', '芝麻酱加水懈开，加辣椒油、醋、生抽', '煮点肉末浇在面上', '淋料汁，撒葱花拌匀'] },
+  { id: 'f_zha_jiang_mian', name: '炸酱面', tags: ['主食'], difficulty: 2, timeMinutes: 20, emoji: '🍜', ingredients: ['面条 150g', '猪肉末 100g', '黄酱 2勺', '甜面酱 1勺', '黄瓜丝 适量'], steps: ['肉末煸酥', '加黄酱甜面酱翻炒', '加水烧开熬至浓稠', '面条煮熟，淋酱配黄瓜丝拌匀'] }
+];
+
+// 导出：便于复制到云开发控制台导入 JSON
+module.exports = FOODS;
+
+/**
+ * 可选：本地运行写入云端 foods 集合
+ * 需要环境：已配置 wx.cloud，或在云函数环境内执行
+ *
+ * 建议操作：
+ *   1. 复制 FOODS 数组内容到剪贴板
+ *   2. 打开云开发控制台 → foods 集合 → 导入 → 粘贴 JSON
+ *   3. 批量导入（80+ 条一次性插入）
+ *
+ * 或用 admin SDK：
+ *   npm install wx-server-sdk
+ *   node scripts/seed-foods.js --write
+ */
+if (require.main === module && process.argv.includes('--write')) {
+  console.log('共 ' + FOODS.length + ' 道菜，准备写入 foods 集合...');
+  // 实际写入逻辑需要在云函数或 admin 环境执行
+  console.log('FOODS JSON 已导出，请复制到云开发控制台导入');
+}

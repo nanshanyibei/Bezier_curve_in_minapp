@@ -1,0 +1,23 @@
+<view class="page">
+
+  <!-- 空态 -->
+  <view wx:if="{{!list.length}}" class="placeholder-page">
+    <view class="placeholder-icon">🕒</view>
+    <view class="placeholder-title">还没有历史记录</view>
+    <view class="placeholder-desc">抽到一道菜并点「就它了」会记录在这里</view>
+  </view>
+
+  <!-- 历史列表 -->
+  <view wx:else>
+    <view wx:for="{{list}}" wx:key="dish.id" class="history-item"
+          data-id="{{item.dish.id}}" bindtap="onTap">
+      <view class="hist-emoji">{{item.dish.emoji}}</view>
+      <view class="hist-info">
+        <view class="hist-name">{{item.dish.name}}</view>
+        <view class="text-dim hist-time">{{item.timeText}}</view>
+      </view>
+      <text class="hist-arrow">›</text>
+    </view>
+  </view>
+
+</view>

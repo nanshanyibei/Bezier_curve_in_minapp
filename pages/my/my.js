@@ -1,5 +1,6 @@
 const diaryStore = require('../../utils/diaryStore');
 const travelStore = require('../../utils/travelStore');
+const foodStore = require('../../utils/foodStore');
 const cb = require('../../utils/cb');
 /* @dev:begin */
 const ai = require('../../utils/ai');
@@ -12,6 +13,7 @@ Page({
     diaryCount: 0,
     diaryChars: 0,
     visitedCount: 0,
+    foodFavCount: 0,
     syncText: '正在连接…',
     syncOk: false,
     /* @dev:begin */
@@ -36,10 +38,13 @@ Page({
   refresh() {
     const d = diaryStore.stats();
     const t = travelStore.stats();
+    let f = { favoriteCount: 0 };
+    try { f = foodStore.stats(); } catch (e) { /* foodStore 未 ready 时兜底 */ }
     this.setData({
       diaryCount: d.count,
       diaryChars: d.chars,
-      visitedCount: t.visited
+      visitedCount: t.visited,
+      foodFavCount: f.favoriteCount || 0
     });
   },
 
@@ -68,6 +73,11 @@ Page({
       showCancel: false,
       confirmText: '知道了'
     });
+  },
+
+  onOpenFood() {
+    // 直接跳转，数据加载交给 food 页自己的 onShow
+    wx.navigateTo({ url: '/pages/food/food' });
   }
 
   /* @dev:begin */

@@ -26,7 +26,7 @@ const TOP_ENTRIES = ['app.js', 'app.json', 'app.wxss', 'config.js', 'sitemap.jso
 const DROP_PAGES = ['assistant', 'insight'];
 
 /** 生产包剔除的工具模块（相对 utils/） */
-const DROP_UTILS = ['ai.js', 'sse.js', 'insightPrompt.js', 'insightParse.js', 'markdown.js'];
+const DROP_UTILS = ['ai.js', 'sse.js', 'agent.js', 'agentTools.js', 'insightPrompt.js', 'insightParse.js', 'markdown.js'];
 
 /** 生产包页面清单，顺序即注册顺序 */
 const PROD_PAGES = [
@@ -41,7 +41,12 @@ const PROD_PAGES = [
   'pages/wardrobe/outfit/outfit',
   'pages/wardrobe/outfit/detail/detail',
   'pages/my/my',
-  'pages/my/privacy/privacy'
+  'pages/my/privacy/privacy',
+  'pages/food/food',
+  'pages/food/detail/detail',
+  'pages/food/favorites/favorites',
+  'pages/food/history/history',
+  'pages/food/custom/edit'
 ];
 
 /** 体积门禁（KB）：主包 2MB 上限，留 10% 余量；超了说明有静态数据塞错位置 */

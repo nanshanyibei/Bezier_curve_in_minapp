@@ -1,0 +1,63 @@
+<view class="page">
+
+  <!-- 菜名 + emoji -->
+  <view class="card">
+    <view class="card-title">菜名</view>
+    <input class="field-input" value="{{name}}" bindinput="onInputName" placeholder="比如：番茄炒蛋" maxlength="20" />
+
+    <view class="card-title" style="margin-top:24rpx;">图标</view>
+    <view class="emoji-grid">
+      <view wx:for="{{emojiList}}" wx:key="*this"
+            class="emoji-item {{emoji === item ? 'emoji-active' : ''}}"
+            data-emoji="{{item}}" bindtap="onPickEmoji">{{item}}</view>
+    </view>
+  </view>
+
+  <!-- 标签 -->
+  <view class="card" wx:if="{{allTags.length}}">
+    <view class="card-title">分类标签</view>
+    <view class="tag-picker">
+      <view wx:for="{{allTags}}" wx:key="*this"
+            class="chip {{selectedTags.indexOf(item) >= 0 ? 'chip-active' : ''}}"
+            data-tag="{{item}}" bindtap="onToggleTag">{{item}}</view>
+    </view>
+  </view>
+
+  <!-- 难度 + 耗时 -->
+  <view class="card">
+    <view class="card-title">难度</view>
+    <view class="seg-row">
+      <view class="seg-item {{difficulty === 1 ? 'seg-active' : ''}}" data-val="1" bindtap="onSetDifficulty">简单</view>
+      <view class="seg-item {{difficulty === 2 ? 'seg-active' : ''}}" data-val="2" bindtap="onSetDifficulty">中等</view>
+      <view class="seg-item {{difficulty === 3 ? 'seg-active' : ''}}" data-val="3" bindtap="onSetDifficulty">复杂</view>
+    </view>
+
+    <view class="card-title" style="margin-top:24rpx;">耗时（分钟）</view>
+    <input class="field-input" type="number" value="{{timeMinutes}}" bindinput="onInputTime" placeholder="30" />
+  </view>
+
+  <!-- 用料 -->
+  <view class="card">
+    <view class="card-title">用料</view>
+    <view class="text-dim field-hint">每行一条，如：西红柿 2个</view>
+    <textarea class="field-textarea" value="{{ingredientsText}}" bindinput="onInputIngredients"
+              placeholder="西红柿 2个&#10;鸡蛋 3个&#10;盐 少许" auto-height />
+  </view>
+
+  <!-- 步骤 -->
+  <view class="card">
+    <view class="card-title">做法</view>
+    <view class="text-dim field-hint">每行一步</view>
+    <textarea class="field-textarea" value="{{stepsText}}" bindinput="onInputSteps"
+              placeholder="鸡蛋打散&#10;热油下蛋&#10;回锅翻炒" auto-height />
+  </view>
+
+  <!-- 操作 -->
+  <view class="action-row">
+    <button wx:if="{{isEdit}}" class="btn-danger action-btn" bindtap="onDelete">删除</button>
+    <button class="btn action-btn" bindtap="onSave" disabled="{{saved}}">
+      {{saved ? '已保存 ✓' : (isEdit ? '保存修改' : '添加菜品')}}
+    </button>
+  </view>
+
+</view>

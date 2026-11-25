@@ -1,0 +1,37 @@
+/* ===== 收藏页 ===== */
+.card-grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 20rpx;
+  gap: 20rpx;
+}
+.fav-card {
+  position: relative;
+  width: calc((100% - 20rpx) / 2);
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
+  border-radius: 20rpx;
+  padding: 32rpx 20rpx 20rpx;
+  text-align: center;
+}
+.fav-emoji {
+  font-size: 72rpx;
+  margin-bottom: 12rpx;
+}
+.fav-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6rpx;
+}
+.fav-meta {
+  font-size: 22rpx;
+}
+.fav-remove {
+  position: absolute;
+  top: 8rpx;
+  right: 16rpx;
+  font-size: 48rpx;
+  color: var(--text-dim);
+  line-height: 1;
+}

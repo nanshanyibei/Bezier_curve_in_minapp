@@ -472,6 +472,7 @@ module.exports = {
   getUserKey,
   getLoginInfo,
   getOpenid,
+  fetchAll,
   fetchMarks,
   pushMark,
   fetchAttractions,

@@ -1,0 +1,24 @@
+<view class="page">
+
+  <!-- 空态 -->
+  <view wx:if="{{!list.length}}" class="placeholder-page">
+    <view class="placeholder-icon">♥</view>
+    <view class="placeholder-title">还没有收藏</view>
+    <view class="placeholder-desc">先去抽一道菜，喜欢就点 ♥ 收藏吧</view>
+    <button class="btn" style="margin-top:40rpx;" bindtap="onGoRandom">去抽菜 🔀</button>
+  </view>
+
+  <!-- 收藏列表 -->
+  <view wx:else class="card-grid">
+    <view wx:for="{{list}}" wx:key="id" class="fav-card"
+          data-id="{{item.id}}" bindtap="onTap" bindlongpress="onRemove">
+      <view class="fav-emoji">{{item.emoji}}</view>
+      <view class="fav-name">{{item.name}}</view>
+      <view class="text-dim fav-meta">
+        <text wx:if="{{item.timeMinutes}}">{{item.timeMinutes}}分钟</text>
+      </view>
+      <view class="fav-remove" catchtap="onRemove" data-id="{{item.id}}">×</view>
+    </view>
+  </view>
+
+</view>

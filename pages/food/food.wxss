@@ -1,0 +1,114 @@
+/* ===== 主页面 ===== */
+.hero {
+  padding: 40rpx 28rpx 20rpx;
+}
+.hero-title {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8rpx;
+}
+.hero-sub {
+  font-size: 24rpx;
+}
+
+/* 筛选 tag 栏 */
+.tag-bar {
+  white-space: nowrap;
+  padding: 0 28rpx 16rpx;
+}
+.chip-sm {
+  padding: 4rpx 14rpx;
+  font-size: 22rpx;
+  margin-right: 12rpx;
+}
+.active-tags {
+  padding: 0 28rpx 16rpx;
+  font-size: 24rpx;
+}
+
+/* 菜品卡片 */
+.dish-card {
+  text-align: center;
+  padding: 60rpx 28rpx 48rpx;
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-card-2) 100%);
+  transition: transform 0.16s ease-out;
+}
+.dish-picking {
+  transform: scale(1.02);
+}
+.dish-emoji {
+  font-size: 100rpx;
+  margin-bottom: 20rpx;
+}
+.dish-name {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12rpx;
+}
+.dish-hint {
+  font-size: 28rpx;
+  color: var(--text-dim);
+}
+.dish-meta {
+  font-size: 24rpx;
+  margin-bottom: 16rpx;
+}
+.dish-meta text {
+  margin: 0 4rpx;
+}
+.dish-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10rpx;
+}
+.dish-tag {
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
+  color: var(--text-dim);
+}
+
+/* 按钮行 */
+.btn-row {
+  display: flex;
+  gap: 20rpx;
+  padding: 0 28rpx;
+  margin-bottom: 40rpx;
+}
+.btn-random, .btn-accept {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 30rpx;
+}
+.btn-random[disabled], .btn-accept[disabled] {
+  opacity: 0.4;
+  background: var(--bg-card-2);
+  color: var(--text-dim);
+}
+
+/* 底部快捷入口 */
+.bottom-row {
+  display: flex;
+  padding: 0 12rpx;
+  margin-bottom: 40rpx;
+}
+.quick-item {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+}
+.quick-icon {
+  font-size: 44rpx;
+  margin-bottom: 6rpx;
+  color: var(--accent);
+}
+.quick-label {
+  font-size: 22rpx;
+  color: var(--text-dim);
+}

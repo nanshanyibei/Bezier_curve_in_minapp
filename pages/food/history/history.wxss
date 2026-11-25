@@ -1,0 +1,30 @@
+/* ===== 历史页 ===== */
+.history-item {
+  display: flex;
+  align-items: center;
+  padding: 28rpx;
+  margin: 0 28rpx 16rpx;
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
+  border-radius: 20rpx;
+}
+.hist-emoji {
+  font-size: 56rpx;
+  margin-right: 24rpx;
+}
+.hist-info {
+  flex: 1;
+}
+.hist-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4rpx;
+}
+.hist-time {
+  font-size: 24rpx;
+}
+.hist-arrow {
+  color: var(--text-dim);
+  font-size: 40rpx;
+}

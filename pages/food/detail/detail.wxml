@@ -1,0 +1,48 @@
+<view class="page" wx:if="{{dish}}">
+
+  <!-- 大图区（emoji 占位 + 渐变背景） -->
+  <view class="hero-banner">
+    <view class="hero-emoji">{{dish.emoji}}</view>
+  </view>
+
+  <!-- 标题 -->
+  <view class="section">
+    <view class="section-title">{{dish.name}}</view>
+    <view class="text-dim section-meta">
+      <text wx:if="{{dish.difficulty}}">难度 {{dish.difficulty}}</text>
+      <text wx:if="{{dish.timeMinutes}}"> · {{dish.timeMinutes}} 分钟</text>
+    </view>
+    <view class="section-tags">
+      <text wx:for="{{dish.tags}}" wx:key="*this" class="chip">{{item}}</text>
+    </view>
+  </view>
+
+  <!-- 用料 -->
+  <view class="card">
+    <view class="card-title">用料</view>
+    <view class="ingredients">
+      <view wx:for="{{dish.ingredients}}" wx:key="*this" class="ingredient-item">· {{item}}</view>
+    </view>
+    <view wx:if="{{!dish.ingredients.length}}" class="text-dim">暂未录入</view>
+  </view>
+
+  <!-- 步骤 -->
+  <view class="card">
+    <view class="card-title">做法</view>
+    <view wx:for="{{dish.steps}}" wx:key="*this" class="step-item">
+      <view class="step-num">{{index + 1}}</view>
+      <view class="step-text">{{item}}</view>
+    </view>
+    <view wx:if="{{!dish.steps.length}}" class="text-dim">暂未录入</view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-bar">
+    <button class="btn-ghost action-btn" bindtap="onToggleFav">
+      {{isFav ? '♥ 已收藏' : '♡ 收藏'}}
+    </button>
+    <button class="btn action-btn" bindtap="onRandomAnother">再来一道 🔀</button>
+  </view>
+  <view wx:if="{{isCustom}}" class="edit-hint text-dim" bindtap="onEditCustom">✎ 编辑这道菜</view>
+
+</view>

@@ -30,6 +30,15 @@
     </view>
   </view>
 
+  <!-- 今天吃什么 入口 -->
+  <view class="card row" bindtap="onOpenFood">
+    <view class="row-main">
+      <view class="row-title">🍽️ 今天吃什么</view>
+      <view class="text-dim">随机抽一道家常菜 · 已收藏 {{foodFavCount}} 道</view>
+    </view>
+    <text class="row-arrow">›</text>
+  </view>
+
   <view class="card row" bindtap="onPrivacy">
     <view class="row-main">
       <view class="row-title">隐私保护指引</view>

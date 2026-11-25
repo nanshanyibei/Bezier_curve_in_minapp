@@ -112,3 +112,22 @@ page {
   font-size: 26rpx;
   text-align: center;
 }
+
+/* 通用标签胶囊 */
+.chip {
+  display: inline-block;
+  padding: 10rpx 24rpx;
+  margin-right: 16rpx;
+  border-radius: 40rpx;
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
+  color: var(--text-dim);
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+
+.chip-active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}

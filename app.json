@@ -13,7 +13,12 @@
     "pages/assistant/assistant",
     "pages/insight/insight",
     "pages/my/my",
-    "pages/my/privacy/privacy"
+    "pages/my/privacy/privacy",
+    "pages/food/food",
+    "pages/food/detail/detail",
+    "pages/food/favorites/favorites",
+    "pages/food/history/history",
+    "pages/food/custom/edit"
   ],
   "subpackages": [
     {
