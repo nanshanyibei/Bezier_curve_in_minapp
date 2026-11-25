@@ -95,6 +95,23 @@ function normalizeDish(d) {
   };
 }
 
+// 预置菜集合名：优先 foods，兼容旧命名 food
+const SEED_COLLECTIONS = ['foods', 'food'];
+
+/** 依次尝试集合名，第一个取到数据的生效 */
+function fetchSeedDocs() {
+  let i = 0;
+  function next() {
+    if (i >= SEED_COLLECTIONS.length) return Promise.resolve(null);
+    const name = SEED_COLLECTIONS[i++];
+    return cb.fetchAll(name).then((docs) => {
+      if (docs && docs.length) return docs;
+      return next();
+    }).catch(() => next());
+  }
+  return next();
+}
+
 function loadSeedFromCloud() {
   const cached = readSeedCache();
   // 云端未配置时直接用本地缓存，不发请求
@@ -102,7 +119,7 @@ function loadSeedFromCloud() {
     return Promise.resolve(cached || []);
   }
   return withTimeout(
-    () => cb.fetchAll('foods'),
+    () => fetchSeedDocs(),
     CLOUD_TIMEOUT,
     null
   ).then((docs) => {
@@ -112,8 +129,7 @@ function loadSeedFromCloud() {
       return dishes;
     }
     // 云端不可用或空，降级用本地旧缓存
-    const cached = readSeedCache();
-    return cached || [];
+    return readSeedCache() || [];
   });
 }
 
