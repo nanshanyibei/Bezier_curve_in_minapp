@@ -1,7 +1,7 @@
 {
   "prov": 110000,
   "v": 1,
-  "updatedAt": 1795336171544,
+  "updatedAt": 1795600382995,
   "note": "示范内容：北京 9 家。ticket / hours 一律留空——票价与开放时间会变，必须人工核实后填，页面在空值时不渲染该行。",
   "spots": [
     {
@@ -31,8 +31,12 @@
         "intro": "manual",
         "highlights": "manual",
         "ticket": "manual",
-        "hours": "manual"
-      }
+        "hours": "manual",
+        "img": "manual"
+      },
+      "img": "cloud://ai-walk-d6g6stcxs36a8e427.6169-ai-walk-d6g6stcxs36a8e427-1535157530/attractions/110000/故宫博物院.jpg",
+      "imgCredit": "Yinan Chen / PUBLIC DOMAIN",
+      "imgSource": "https://commons.wikimedia.org/wiki/File:Gfp-beijing-forbidden-palace-hall-behind-main-hall.jpg"
     },
     {
       "name": "天坛公园",
@@ -59,8 +63,12 @@
       "tips": "联票含祈年殿、圜丘、回音壁；只买公园门票进不去这三处",
       "src": {
         "intro": "manual",
-        "highlights": "manual"
-      }
+        "highlights": "manual",
+        "img": "manual"
+      },
+      "img": "cloud://ai-walk-d6g6stcxs36a8e427.6169-ai-walk-d6g6stcxs36a8e427-1535157530/attractions/110000/天坛公园.jpg",
+      "imgCredit": "Maros M r a z (Maros) / CC BY-SA 3.0",
+      "imgSource": "https://commons.wikimedia.org/wiki/File:Temple_of_Heaven,_Beijing,_China_-_010_edit.jpg"
     },
     {
       "name": "颐和园",
@@ -88,8 +96,12 @@
       "tips": "东宫门进、北宫门出可少走回头路；佛香阁等园中园另收门票",
       "src": {
         "intro": "manual",
-        "highlights": "manual"
-      }
+        "highlights": "manual",
+        "img": "manual"
+      },
+      "img": "cloud://ai-walk-d6g6stcxs36a8e427.6169-ai-walk-d6g6stcxs36a8e427-1535157530/attractions/110000/颐和园.jpg",
+      "imgCredit": "Larry Koester / CC BY 2.0",
+      "imgSource": "https://commons.wikimedia.org/wiki/File:Summer_Palace_-_aerial_(50429205866).png"
     },
     {
       "name": "八达岭—慕田峪长城旅游区",
@@ -117,8 +129,12 @@
       "tips": "索道与滑道分开售票；八达岭需提前实名预约，旺季名额紧张",
       "src": {
         "intro": "manual",
-        "highlights": "manual"
-      }
+        "highlights": "manual",
+        "img": "manual"
+      },
+      "img": "cloud://ai-walk-d6g6stcxs36a8e427.6169-ai-walk-d6g6stcxs36a8e427-1535157530/attractions/110000/八达岭_慕田峪长城旅游区.jpg",
+      "imgCredit": "David290 / CC BY-SA 4.0",
+      "imgSource": "https://commons.wikimedia.org/wiki/File:%E6%85%95%E7%94%B0%E5%B3%AA%E9%95%BF%E5%9F%8E%E8%88%AA%E6%8B%8D.jpg"
     },
     {
       "name": "明十三陵景区",
@@ -146,8 +162,12 @@
       "tips": "长陵、定陵、昭陵分开售票，看两处以上买联票更划算",
       "src": {
         "intro": "manual",
-        "highlights": "manual"
-      }
+        "highlights": "manual",
+        "img": "manual"
+      },
+      "img": "cloud://ai-walk-d6g6stcxs36a8e427.6169-ai-walk-d6g6stcxs36a8e427-1535157530/attractions/110000/明十三陵景区.jpg",
+      "imgCredit": "Charlie fong / CC BY-SA 4.0",
+      "imgSource": "https://commons.wikimedia.org/wiki/File:Ming_Changling_Tomb_After_Snow.jpg"
     },
     {
       "name": "恭王府景区",
@@ -174,8 +194,12 @@
       "tips": "需实名预约；旺季人流大，开馆即到体验最好",
       "src": {
         "intro": "manual",
-        "highlights": "manual"
-      }
+        "highlights": "manual",
+        "img": "manual"
+      },
+      "img": "cloud://ai-walk-d6g6stcxs36a8e427.6169-ai-walk-d6g6stcxs36a8e427-1535157530/attractions/110000/恭王府景区.jpg",
+      "imgCredit": "Hermann Luyken / CC0",
+      "imgSource": "https://commons.wikimedia.org/wiki/File:2014.08.17.154948_Entrance_Prince_Gong%27s_Mansion_Beijing.jpg"
     },
     {
       "name": "北京奥林匹克公园",
@@ -201,8 +225,12 @@
       "tips": "场馆入内需另购票；看夜景建议 19:00 之后灯光全开",
       "src": {
         "intro": "manual",
-        "highlights": "manual"
-      }
+        "highlights": "manual",
+        "img": "manual"
+      },
+      "img": "cloud://ai-walk-d6g6stcxs36a8e427.6169-ai-walk-d6g6stcxs36a8e427-1535157530/attractions/110000/北京奥林匹克公园.jpg",
+      "imgCredit": "Gary Todd from Xinzheng, China / CC0",
+      "imgSource": "https://commons.wikimedia.org/wiki/File:Beijing_Olympic_Park_%22Bird%27s_Nest%22_(9869762484).jpg"
     },
     {
       "name": "圆明园遗址公园景区",
@@ -229,8 +257,12 @@
       "tips": "园子极大，建议南门进、集中看西洋楼；夏季备水防晒",
       "src": {
         "intro": "manual",
-        "highlights": "manual"
-      }
+        "highlights": "manual",
+        "img": "manual"
+      },
+      "img": "cloud://ai-walk-d6g6stcxs36a8e427.6169-ai-walk-d6g6stcxs36a8e427-1535157530/attractions/110000/圆明园遗址公园景区.jpg",
+      "imgCredit": "深鸣 / CC BY-SA 4.0",
+      "imgSource": "https://commons.wikimedia.org/wiki/File:Yuanmingyuan_Ruins_of_Dashuifa_(20240708).jpg"
     },
     {
       "name": "北京（通州）大运河文化旅游景区",
@@ -258,8 +290,12 @@
       "tips": "滨河区域免费开放，登塔院落单独售票；游船班次随季节调整",
       "src": {
         "intro": "manual",
-        "highlights": "manual"
-      }
+        "highlights": "manual",
+        "img": "manual"
+      },
+      "img": "cloud://ai-walk-d6g6stcxs36a8e427.6169-ai-walk-d6g6stcxs36a8e427-1535157530/attractions/110000/北京_通州_大运河文化旅游景区.jpg",
+      "imgCredit": "維基小霸王 / CC BY-SA 4.0",
+      "imgSource": "https://commons.wikimedia.org/wiki/File:%E4%B8%89%E5%BA%99%E4%B8%80%E5%A1%94.jpg"
     }
   ]
 }

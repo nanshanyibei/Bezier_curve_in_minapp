@@ -251,13 +251,31 @@ function getAllDishes() {
   return [...seed, ...custom];
 }
 
-/** 按 tag 交集过滤（tags 空数组 = 全部） */
+// 标签维度：同一维度内取并集（如 川菜+粤菜），维度之间取交集（如 川菜 且 炒菜）
+const TAG_DIMENSIONS = [
+  ['川菜', '粤菜', '湘菜', '江浙菜', '家常菜'],
+  ['快手菜', '炒菜', '炖菜', '蒸菜', '汤类', '主食'],
+  ['荤菜', '素菜', '半荤半素']
+];
+
+/** 按标签过滤（tags 空数组 = 全部） */
 function getDishesByTags(tags) {
   if (!tags || !tags.length) return getAllDishes();
-  const all = getAllDishes();
-  return all.filter((d) => {
+
+  const groups = TAG_DIMENSIONS.map(() => []);
+  tags.forEach((t) => {
+    let hit = -1;
+    for (let i = 0; i < TAG_DIMENSIONS.length; i++) {
+      if (TAG_DIMENSIONS[i].indexOf(t) >= 0) { hit = i; break; }
+    }
+    if (hit >= 0) groups[hit].push(t);
+    else groups.push([t]); // 未归类的标签各自成组，仍需命中
+  });
+
+  const active = groups.filter((g) => g.length);
+  return getAllDishes().filter((d) => {
     const dishTags = d.tags || [];
-    return tags.every((t) => dishTags.indexOf(t) >= 0);
+    return active.every((g) => g.some((t) => dishTags.indexOf(t) >= 0));
   });
 }
 

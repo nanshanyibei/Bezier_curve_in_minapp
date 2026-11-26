@@ -15,7 +15,10 @@
   </scroll-view>
   <view wx:if="{{activeTags.length}}" class="active-tags">
     <text class="text-dim">已选：</text>
-    <text wx:for="{{activeTags}}" wx:key="*this" class="chip chip-sm">{{item}} ×</text>
+    <view wx:for="{{activeTags}}" wx:key="*this"
+          class="chip chip-sm chip-removable"
+          data-tag="{{item}}" bindtap="onToggleTag">{{item}} ×</view>
+    <view class="chip chip-sm" bindtap="onClearTags">清空</view>
   </view>
 
   <!-- 空态 -->
@@ -25,7 +28,8 @@
     <view class="placeholder-desc">
       {{activeTags.length ? '点一下「全部」试试，或者换几个标签' : '可能是云端预置菜还没导入，导入后点下面按钮重试'}}
     </view>
-    <button class="btn" style="margin-top:40rpx;" bindtap="onRetry">重新加载</button>
+    <button wx:if="{{activeTags.length}}" class="btn" style="margin-top:40rpx;" bindtap="onClearTags">清空筛选</button>
+    <button wx:else class="btn" style="margin-top:40rpx;" bindtap="onRetry">重新加载</button>
   </view>
 
   <block wx:else>
